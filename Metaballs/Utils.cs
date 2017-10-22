@@ -32,15 +32,23 @@ namespace Metaballs
 {
     public static class Utils
     {
+        public delegate Vector3 ColorFunction(float alpha, float innerGradient);
+        public delegate float FalloffFunction(float distance, int x, int y);
+
         /// <summary>
         /// Creates a metaball texture.
         /// <p><b>Beware: Don't forget to dispose the texture at the end. Noone will take care of that for you.</b></p>
         /// </summary>
-        /// <param name="radius">The radius.</param>
-        /// <param name="color">The color.</param>
+        /// <param name="radius">Determines the distance at which the metaball has influence.</param>
+        /// <param name="textureFalloff">The texture falloff.</param>
+        /// <param name="colorFalloff">The color falloff.</param>
+        /// <param name="colorFunction">A function that determines how to colour the metaball. Has no effect on their shape. It is purely
+        /// aesthetic.</param>
         /// <param name="graphicsDevice">The graphics device.</param>
-        /// <returns></returns>
-        public static Texture2D CreateMetaballTexture(int radius, Color color, GraphicsDevice graphicsDevice)
+        /// <returns>
+        /// The texture used for making metabalss
+        /// </returns>
+        public static Texture2D CreateMetaballTexture(int radius, FalloffFunction textureFalloff, FalloffFunction colorFalloff, ColorFunction colorFunction, GraphicsDevice graphicsDevice)
         {
             int length = radius * 2;
             Color[] colors = new Color[length * length];
@@ -49,32 +57,57 @@ namespace Metaballs
             {
                 for (int x = 0; x < length; x++)
                 {
-                    float distance = Vector2.Distance(Vector2.One,
-                        new Vector2(x, y) / radius);
-                    float alpha = Falloff(distance);
+                    float distance = Vector2.Distance(Vector2.One, new Vector2(x, y) / radius);
 
-                    colors[y * length + x] = color;
-                    colors[y * length + x].A =
-                        (byte)MathHelper.Clamp(alpha * 256f + 0.5f, 0f, 255f);
+                    // This is the falloff function used to make the metaballs.
+                    float alpha = textureFalloff(distance, x, y);
+
+                    // We'll use a smaller, inner gradient to colour the center of the metaballs a different colour. This is purely aesthetic.
+                    float innerGradient = colorFalloff(distance, x, y);
+                    colors[y * length + x] = new Color(colorFunction(alpha, innerGradient));
+                    colors[y * length + x].A = (byte) MathHelper.Clamp(alpha * 256f + 0.5f, 0f, 255f);
                 }
             }
 
-            Texture2D tex = new Texture2D(graphicsDevice, length, length);
+            Texture2D tex = new Texture2D(graphicsDevice, radius * 2, radius * 2);
             tex.SetData(colors);
             return tex;
         }
 
-        private static float Falloff(float r)
+        /// <summary>
+        ///     Colours the metaballs with a gradient between the two specified colours. For best result, the center colour
+        ///     should be brighter than the border colour.
+        /// </summary>
+        public static ColorFunction CreateTwoColorFunction(Color border, Color center)
         {
-            if (0 <= r && r <= 1 / 3F)
-            {
-                return 1F - 3F * r * r;
-            }
-            if (1 / 3F < r && r <= 1)
-            {
-                return 2 / 3F * (1 - r) * (1 - r);
-            }
-            return 0f;
+            return (alpha, innerGradient) => Color.Lerp(border, center, innerGradient).ToVector3();
+        }
+
+        public static ColorFunction CreateSingleColorFunction(Color color)
+        {
+            return (alpha, innerGradient) => color.ToVector3();
+        }
+
+        /// <summary>
+        ///     The falloff function for the metaballs.
+        /// </summary>
+        /// <param name="maxDistance">How far before the function goes to zero.</param>
+        /// <param name="scalingFactor">Multiplies the function by this value.</param>
+        /// <returns>The metaball value at the given distance.</returns>
+        public static FalloffFunction CreateFalloffFunctionCircle(float maxDistance, float scalingFactor)
+        {
+            return (distance, x, y) => {
+                if (distance <= maxDistance / 3)
+                {
+                    return scalingFactor * (1 - 3 * distance * distance / (maxDistance * maxDistance));
+                }
+                if (distance <= maxDistance)
+                {
+                    float x1 = 1 - distance / maxDistance;
+                    return (3f / 2f) * scalingFactor * x1 * x1;
+                }
+                return 0;
+            };
         }
     }
 }

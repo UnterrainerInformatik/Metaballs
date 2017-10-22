@@ -25,6 +25,8 @@
 // For more information, please refer to <http://unlicense.org>
 // ***************************************************************************
 
+using System;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -36,13 +38,29 @@ namespace Metaballs
     /// </summary>
     public class Game1 : Game
     {
-        GraphicsDeviceManager graphics;
-        SpriteBatch spriteBatch;
+        public const int MIN_SCREEN_RESOLUTION_WIDTH = 1024;
+        public const int MIN_SCREEN_RESOLUTION_HEIGHT = 768;
+
+        private readonly GraphicsDeviceManager graphics;
+        private SpriteBatch spriteBatch;
+
+        private Texture2D metaballTexture;
+        private readonly List<Vector2> metaballPositions = new List<Vector2>();
+        private RenderTarget2D metaballTarget;
 
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
+            graphics.PreferredBackBufferWidth = MIN_SCREEN_RESOLUTION_WIDTH;
+            graphics.PreferredBackBufferHeight = MIN_SCREEN_RESOLUTION_HEIGHT;
+            graphics.IsFullScreen = false;
+            graphics.PreparingDeviceSettings += PrepareDeviceSettings;
             Content.RootDirectory = "Content";
+        }
+
+        void PrepareDeviceSettings(object sender, PreparingDeviceSettingsEventArgs e)
+        {
+            e.GraphicsDeviceInformation.GraphicsProfile = GraphicsProfile.HiDef;
         }
 
         /// <summary>
@@ -53,7 +71,13 @@ namespace Metaballs
         /// </summary>
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
+            Random r = new Random();
+            int width = GraphicsDevice.Viewport.Width;
+            int height = GraphicsDevice.Viewport.Height;
+            for (int i = 0; i < 100; i++)
+                metaballPositions.Add(new Vector2(r.Next(width), r.Next(height)));
+
+            metaballTarget = new RenderTarget2D(GraphicsDevice, width, height);
 
             base.Initialize();
         }
@@ -67,7 +91,10 @@ namespace Metaballs
             // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            // TODO: use this.Content to load your game content here
+            metaballTexture = Utils.CreateMetaballTexture(120, Utils.CreateFalloffFunctionCircle(1F, 1F),
+                Utils.CreateFalloffFunctionCircle(0.6F, 0.8F), Utils.CreateTwoColorFunction(Color.DarkRed, Color.Yellow),
+                GraphicsDevice);
+            //metaballTexture = Utils.CreateMetaballTexture(90, Utils.CreateSingleColorPicker(Color.White), GraphicsDevice);
         }
 
         /// <summary>
@@ -76,7 +103,7 @@ namespace Metaballs
         /// </summary>
         protected override void UnloadContent()
         {
-            // TODO: Unload any non ContentManager content here
+            metaballTexture.Dispose();
         }
 
         /// <summary>
@@ -101,11 +128,26 @@ namespace Metaballs
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
+            DrawMetaballs(metaballTarget);
 
-            // TODO: Add your drawing code here
+            GraphicsDevice.SetRenderTarget(null);
+            GraphicsDevice.Clear(Color.Black);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+            spriteBatch.Draw(metaballTarget, Vector2.Zero, Color.White);
+            spriteBatch.End();
 
             base.Draw(gameTime);
+        }
+
+        private void DrawMetaballs(RenderTarget2D target)
+        {
+            GraphicsDevice.SetRenderTarget(target);
+            GraphicsDevice.Clear(Color.Transparent);
+
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive);
+            foreach (var position in metaballPositions)
+                spriteBatch.Draw(metaballTexture, position, Color.White);
+            spriteBatch.End();
         }
     }
 }
