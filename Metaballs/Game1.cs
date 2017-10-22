@@ -52,9 +52,9 @@ namespace Metaballs
         private AlphaTestEffect alphaTest;
         private readonly Random rand = new Random();
 
-        private Color glow;
-        private float glowFactor;
+        private Preset preset;
         private int numberOfMetaballs = 120;
+
 
         private readonly InputManager input = new InputManager();
 
@@ -117,37 +117,45 @@ namespace Metaballs
 
             font = Content.Load<SpriteFont>("Arsenal");
 
-            metaballTexture = MetaballGeneratorUtils.CreateMetaballTexture(120,
-                MetaballGeneratorUtils.CreateFalloffFunctionCircle(1f, 1f),
-                MetaballGeneratorUtils.CreateFalloffFunctionCircle(0.6f, 0.8f),
-                MetaballGeneratorUtils.CreateTwoColorFunction(Color.DarkRed, Color.Yellow),
-                GraphicsDevice);
-            /*metaballTexture = Utils.CreateMetaballTexture(120, Utils.CreateFalloffFunctionCircle(1f, 1f),
-                Utils.CreateFalloffFunctionCircle(0.6f, 0.8f), Utils.CreateSingleColorFunction(Color.White),
-                GraphicsDevice);*/
             alphaTest = new AlphaTestEffect(GraphicsDevice);
             var viewport = GraphicsDevice.Viewport;
             alphaTest.Projection = Matrix.CreateTranslation(-0.5f, -0.5f, 0) *
                                    Matrix.CreateOrthographicOffCenter(0, viewport.Width, viewport.Height, 0, 0, 1);
             alphaTest.ReferenceAlpha = 128;
-
-            Reset();
+            Reset(Preset.Lava());
         }
 
-        private void Reset()
+        private void RecreateTexture()
         {
+            metaballTexture?.Dispose();
+            metaballTexture = MetaballGeneratorUtils.CreateMetaballTexture(preset.Size,
+                MetaballGeneratorUtils.CreateFalloffFunctionCircle(1f, 1f),
+                MetaballGeneratorUtils.CreateFalloffFunctionCircle(preset.MaxDistance, preset.ScalingFactor),
+                MetaballGeneratorUtils.CreateTwoColorFunction(preset.GradientOuter, preset.GradientInner),
+                GraphicsDevice);
+            foreach (var metaball in metaballs)
+            {
+                metaball.Texture = metaballTexture;
+            }
+        }
+
+        private void Reset(Preset p)
+        {
+            preset = p;
+            RecreateTexture();
+            /*metaballTexture = Utils.CreateMetaballTexture(120, Utils.CreateFalloffFunctionCircle(1f, 1f),
+                Utils.CreateFalloffFunctionCircle(0.6f, 0.8f), Utils.CreateSingleColorFunction(Color.White),
+                GraphicsDevice);*/
             metaballs.Clear();
             numberOfMetaballs = 120;
             InitializeMetaballs(numberOfMetaballs);
-            glow = Color.Yellow;
-            glowFactor = .3f;
         }
 
         private void AdjustNumberOfMetaballs()
         {
             while (numberOfMetaballs > metaballs.Count)
             {
-                metaballs.Add(CreateMetaball()); 
+                metaballs.Add(CreateMetaball());
             }
 
             while (numberOfMetaballs < metaballs.Count)
@@ -193,7 +201,7 @@ namespace Metaballs
 
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(Color.Black);
-            DrawMetaballsGlow(glowFactor);
+            DrawMetaballsGlow(preset.GlowFactor);
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, null, null, null, alphaTest);
             spriteBatch.Draw(metaballTarget, Vector2.Zero, Color.White);
             spriteBatch.End();
@@ -224,7 +232,7 @@ namespace Metaballs
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive);
             foreach (var metaball in metaballs)
             {
-                Color tint = new Color(glow.ToVector3() * weight);
+                Color tint = new Color(preset.Glow.ToVector3() * weight);
                 spriteBatch.Draw(metaball.Texture, metaball.Position - metaball.Origin, null, tint, 0f, Vector2.Zero, 1f,
                     SpriteEffects.None, 0f);
             }
@@ -236,20 +244,95 @@ namespace Metaballs
             input.Update();
             if (input.IsButtonPress(Buttons.Back) || input.IsKeyPress(Keys.Escape))
                 Exit();
-            if (input.IsKeyPress(Keys.R)) Reset();
-            if (input.IsKeyPress(Keys.Q)) glowFactor = (glowFactor - .1f).Clamp(0f, 1f);
-            if (input.IsKeyPress(Keys.W)) glowFactor = (glowFactor + .1f).Clamp(0f, 1f);
-            if (input.IsKeyDown(Keys.A)) numberOfMetaballs = (numberOfMetaballs - 1).Clamp(0, int.MaxValue);
-            if (input.IsKeyDown(Keys.S)) numberOfMetaballs = (numberOfMetaballs + 1).Clamp(0, int.MaxValue);
+            if (input.IsKeyPress(Keys.R)) Reset(Preset.Lava());
+            if (input.IsKeyPress(Keys.T)) Reset(Preset.Water());
+
+            bool valModified = false;
+            preset.GlowFactor = HandleFloatInput(Keys.Q, Keys.W, .1f, preset.GlowFactor, ref valModified).Clamp(0f, 1f);
+            numberOfMetaballs = HandleIntInput(Keys.A, Keys.S, 1, numberOfMetaballs, ref valModified).Clamp(0, int.MaxValue);
+
+            bool textureModified = false;
+            preset.Glow = HandleColorInput(Keys.NumPad7, Keys.NumPad8, Keys.NumPad9, preset.Glow, ref textureModified);
+            preset.GradientInner = HandleColorInput(Keys.NumPad4, Keys.NumPad5, Keys.NumPad6, preset.GradientInner,
+                ref textureModified);
+            preset.GradientOuter = HandleColorInput(Keys.NumPad1, Keys.NumPad2, Keys.NumPad3, preset.GradientOuter,
+                ref textureModified);
+            preset.MaxDistance = HandleFloatInput(Keys.Y, Keys.X, .01f, preset.MaxDistance, ref textureModified, true).Clamp(0f, 1f);
+            preset.ScalingFactor = HandleFloatInput(Keys.C, Keys.V, .01f, preset.ScalingFactor, ref textureModified, true).Clamp(0f, 1f);
+            preset.Size = HandleIntInput(Keys.B, Keys.N, 1, preset.Size, ref textureModified, true).Clamp(0, int.MaxValue);
+            if (textureModified)
+            {
+                RecreateTexture();
+            }
             AdjustNumberOfMetaballs();
+        }
+
+        private float HandleFloatInput(Keys down, Keys up, float step, float value, ref bool isModified, bool repeat = false)
+        {
+            float v = 0;
+            if (!repeat && input.IsKeyPress(up)||repeat && input.IsKeyDown(up))
+            {
+                v = step;
+                isModified = true;
+            }
+            if (!repeat && input.IsKeyPress(down)||repeat && input.IsKeyDown(down))
+            {
+                v = -step;
+                isModified = true;
+            }
+            return value + v;
+        }
+
+        private int HandleIntInput(Keys down, Keys up, int step, int value, ref bool isModified, bool repeat = false)
+        {
+            int v = 0;
+            if (!repeat && input.IsKeyPress(up) || repeat && input.IsKeyDown(up))
+            {
+                v = step;
+                isModified = true;
+            }
+            if (!repeat && input.IsKeyPress(down) || repeat && input.IsKeyDown(down))
+            {
+                v = -step;
+                isModified = true;
+            }
+            return value + v;
+        }
+
+        private Color HandleColorInput(Keys keyR, Keys keyG, Keys keyB, Color c, ref bool isModified)
+        {
+            Color color = c;
+            int v = input.IsCtrlDown ? 1 : -1;
+            if (input.IsKeyDown(keyR))
+            {
+                color = new Color((color.R + v).Clamp(0, 255), color.G, color.B, color.A);
+                isModified = true;
+            }
+            if (input.IsKeyDown(keyG))
+            {
+                color = new Color(color.R, (color.G + v).Clamp(0, 255), color.B, color.A);
+                isModified = true;
+            }
+            if (input.IsKeyDown(keyB))
+            {
+                color = new Color(color.R, color.G, (color.B + v).Clamp(0, 255), color.A);
+                isModified = true;
+            }
+            return color;
         }
 
         private void DrawText()
         {
             StringBuilder b = new StringBuilder();
-            b.Append("Reset Scene: (r)\n");
+            b.Append("Reset Scene: Lava(r), Water(t)\n");
             b.Append($"Number of Metaballs: {numberOfMetaballs} <(a), >(s)\n");
-            b.Append($"GlowFactor: {glowFactor:0.##} <(q), >(w)\n");
+            b.Append($"GlowFactor: {preset.GlowFactor:0.##} <(q), >(w)\n");
+            b.Append($"GlowColor: {preset.Glow} <(num789), >(ctrl)(num789)\n");
+            b.Append($"Texture_GradientInner: {preset.GradientInner} <(num456), >(ctrl)(num456)\n");
+            b.Append($"Texture_GradientOuter: {preset.GradientOuter} <(num123), >(ctrl)(num123)\n");
+            b.Append($"Texture_MaxDistance: {preset.MaxDistance:0.##} <(y), >(x)\n");
+            b.Append($"Texture_ScalingFactor: {preset.ScalingFactor:0.##} <(c), >(v)\n");
+            b.Append($"Texture_Size: {preset.Size} <(b), >(n)\n");
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
             spriteBatch.DrawString(font, b, new Vector2(10, 10), Color.White);

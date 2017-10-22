@@ -52,23 +52,21 @@ namespace Metaballs
         public KeyboardState KeyboardState { get; set; }
 
         public bool IsKeyPress(Keys key) => KeyboardState.IsKeyDown(key) && OldKeyboardState.IsKeyUp(key);
-
         public bool IsKeyDown(Keys key) => KeyboardState.IsKeyDown(key);
-
         public bool IsKeyUp(Keys key) => KeyboardState.IsKeyUp(key);
+
+        public bool IsShiftDown => IsKeyDown(Keys.LeftShift) || IsKeyDown(Keys.RightShift);
+        public bool IsCtrlDown => IsKeyDown(Keys.LeftControl) || IsKeyDown(Keys.RightControl);
+        public bool IsAltDown => IsKeyDown(Keys.LeftAlt) || IsKeyDown(Keys.RightAlt);
 
         public bool IsButtonPress(Buttons button)
             => GamePadState.IsButtonDown(button) && OldGamePadState.IsButtonUp(button);
-
         public bool IsButtonDown(Buttons button) => GamePadState.IsButtonDown(button);
-
         public bool IsButtonUp(Buttons button) => GamePadState.IsButtonUp(button);
 
         public bool IsMouseButtonPress(MouseButton button)
             => IsMouseButtonDown(MouseState, button) && IsMouseButtonUp(OldMouseState, button);
-
         public bool IsMouseButtonUp(MouseButton button) => IsMouseButtonUp(MouseState, button);
-
         public bool IsMouseButtonDown(MouseButton button) => IsMouseButtonDown(MouseState, button);
 
         private bool IsMouseButtonUp(MouseState state, MouseButton button)
