@@ -45,8 +45,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Game1.cs" />
-    <Compile Include="InputStateManager\GamePadStates.cs" />
+    <Compile Include="InputStateManager\Helpers\GamePadStates.cs" />
     <Compile Include="InputStateManager\InputManager.cs" />
+    <Compile Include="InputStateManager\GamePad.cs" />
+    <Compile Include="InputStateManager\Keyboard.cs" />
+    <Compile Include="InputStateManager\Mouse.cs" />
+    <Compile Include="InputStateManager\Touch.cs" />
     <Compile Include="Metaball.cs" />
     <Compile Include="Preset.cs" />
     <Compile Include="Primitives\Primitives2D.cs" />

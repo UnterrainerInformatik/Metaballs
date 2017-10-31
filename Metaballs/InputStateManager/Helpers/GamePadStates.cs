@@ -26,23 +26,34 @@
 // ***************************************************************************
 
 using JetBrains.Annotations;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 
-namespace Metaballs.InputStateManager
+namespace Metaballs.InputStateManager.Helpers
 {
     [PublicAPI]
-    public class InputManager
+    class GamePadStates
     {
-        public Mouse Mouse { get; set; } = new Mouse();
-        public GamePad GamePad { get; set; } = new GamePad();
-        public Keyboard Keyboard { get; set; } = new Keyboard();
-        public Touch Touch { get; set; } = new Touch();
-        
+        private GamePadState[] OldStates { get; set; } = new GamePadState[4];
+        private GamePadState[] States { get; set; } = new GamePadState[4];
+
+        public GamePadState Get(PlayerIndex playerIndex = PlayerIndex.One)
+        {
+            return States[(int) playerIndex];
+        }
+
+        public GamePadState GetOld(PlayerIndex playerIndex = PlayerIndex.One)
+        {
+            return OldStates[(int) playerIndex];
+        }
+
         public void Update()
         {
-            Mouse.Update();
-            Keyboard.Update();
-            GamePad.Update();
-            Touch.Update();
+            for (int i = 0; i < States.Length; i++)
+                OldStates[i] = States[i];
+
+            for (int i = 0; i < States.Length; i++)
+                States[i] = Microsoft.Xna.Framework.Input.GamePad.GetState(i);
         }
     }
 }

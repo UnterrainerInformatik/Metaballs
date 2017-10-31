@@ -25,24 +25,24 @@
 // For more information, please refer to <http://unlicense.org>
 // ***************************************************************************
 
+using System.Collections.Generic;
 using JetBrains.Annotations;
+using Microsoft.Xna.Framework.Input.Touch;
 
 namespace Metaballs.InputStateManager
 {
     [PublicAPI]
-    public class InputManager
+    public class Touch
     {
-        public Mouse Mouse { get; set; } = new Mouse();
-        public GamePad GamePad { get; set; } = new GamePad();
-        public Keyboard Keyboard { get; set; } = new Keyboard();
-        public Touch Touch { get; set; } = new Touch();
-        
+        private TouchLocation _mouseTouchLocation;
+        private TouchLocation _prevMouseTouchLocation;
+        public bool IsGestureAvailable;
+        private TouchCollection _touchCollection;
+        private List<GestureSample> _gestures = new List<GestureSample>(4);
+
         public void Update()
         {
-            Mouse.Update();
-            Keyboard.Update();
-            GamePad.Update();
-            Touch.Update();
+
         }
     }
 }

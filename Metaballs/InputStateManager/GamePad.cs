@@ -26,34 +26,33 @@
 // ***************************************************************************
 
 using JetBrains.Annotations;
+using Metaballs.InputStateManager.Helpers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
 namespace Metaballs.InputStateManager
 {
     [PublicAPI]
-    public class GamePadStates
+    public class GamePad
     {
-        private GamePadState[] OldStates { get; set; } = new GamePadState[4];
-        private GamePadState[] States { get; set; } = new GamePadState[4];
+        GamePadStates GamePadStates { get; set; } = new GamePadStates();
 
-        public GamePadState Get(PlayerIndex playerIndex = PlayerIndex.One)
-        {
-            return States[(int) playerIndex];
-        }
+        public GamePadState OldGamePadState(PlayerIndex p = PlayerIndex.One) => GamePadStates.GetOld(p);
+        public GamePadState GamePadState(PlayerIndex p = PlayerIndex.One) => GamePadStates.Get(p);
 
-        public GamePadState GetOld(PlayerIndex playerIndex = PlayerIndex.One)
-        {
-            return OldStates[(int) playerIndex];
-        }
+        public bool IsConnected(PlayerIndex p = PlayerIndex.One) => GamePadState(p).IsConnected;
+        public bool IsDown(Buttons button, PlayerIndex p = PlayerIndex.One)
+            => GamePadState(p).IsButtonDown(button);
+        public bool IsUp(Buttons button, PlayerIndex p = PlayerIndex.One)
+            => GamePadState(p).IsButtonUp(button);
+        public bool IsPress(Buttons button, PlayerIndex p = PlayerIndex.One)
+            => GamePadState(p).IsButtonDown(button) && OldGamePadState(p).IsButtonUp(button);
+        public bool IsRelease(Buttons button, PlayerIndex p = PlayerIndex.One)
+            => OldGamePadState(p).IsButtonDown(button) && GamePadState(p).IsButtonUp(button);
 
         public void Update()
         {
-            for (int i = 0; i < States.Length; i++)
-                OldStates[i] = States[i];
-
-            for (int i = 0; i < States.Length; i++)
-                States[i] = GamePad.GetState(i);
+            GamePadStates.Update();
         }
     }
 }

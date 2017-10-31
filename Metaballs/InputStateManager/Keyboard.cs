@@ -26,23 +26,29 @@
 // ***************************************************************************
 
 using JetBrains.Annotations;
+using Microsoft.Xna.Framework.Input;
 
 namespace Metaballs.InputStateManager
 {
     [PublicAPI]
-    public class InputManager
+    public class Keyboard
     {
-        public Mouse Mouse { get; set; } = new Mouse();
-        public GamePad GamePad { get; set; } = new GamePad();
-        public Keyboard Keyboard { get; set; } = new Keyboard();
-        public Touch Touch { get; set; } = new Touch();
-        
+        public KeyboardState OldKeyboardState { get; set; }
+        public KeyboardState KeyboardState { get; set; }
+
+        public bool IsDown(Keys key) => KeyboardState.IsKeyDown(key);
+        public bool IsUp(Keys key) => KeyboardState.IsKeyUp(key);
+        public bool IsPress(Keys key) => KeyboardState.IsKeyDown(key) && OldKeyboardState.IsKeyUp(key);
+        public bool IsRelease(Keys key) => OldKeyboardState.IsKeyDown(key) && KeyboardState.IsKeyUp(key);
+
+        public bool IsShiftDown => IsDown(Keys.LeftShift) || IsDown(Keys.RightShift);
+        public bool IsCtrlDown => IsDown(Keys.LeftControl) || IsDown(Keys.RightControl);
+        public bool IsAltDown => IsDown(Keys.LeftAlt) || IsDown(Keys.RightAlt);
+
         public void Update()
         {
-            Mouse.Update();
-            Keyboard.Update();
-            GamePad.Update();
-            Touch.Update();
+            OldKeyboardState = KeyboardState;
+            KeyboardState = Microsoft.Xna.Framework.Input.Keyboard.GetState();
         }
     }
 }

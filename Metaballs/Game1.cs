@@ -37,6 +37,7 @@ using tainicom.Aether.Physics2D.Controllers;
 using tainicom.Aether.Physics2D.Dynamics;
 using tainicom.Aether.Physics2D.Dynamics.Joints;
 using Utilities;
+using Mouse = Metaballs.InputStateManager.Mouse;
 
 namespace Metaballs
 {
@@ -335,11 +336,11 @@ namespace Metaballs
         private void HandleInput()
         {
             input.Update();
-            if (input.IsButtonPress(Buttons.Back) || input.IsKeyPress(Keys.Escape))
+            if (input.GamePad.IsPress(Buttons.Back) || input.Keyboard.IsPress(Keys.Escape))
                 Exit();
-            if (input.IsKeyPress(Keys.R)) Reset(Preset.Lava());
-            if (input.IsKeyPress(Keys.T)) Reset(Preset.Water());
-            if (input.IsKeyPress(Keys.G))
+            if (input.Keyboard.IsPress(Keys.R)) Reset(Preset.Lava());
+            if (input.Keyboard.IsPress(Keys.T)) Reset(Preset.Water());
+            if (input.Keyboard.IsPress(Keys.G))
             {
                 isGravity = !isGravity;
                 if (isGravity)
@@ -382,12 +383,12 @@ namespace Metaballs
             bool repeat = false)
         {
             float v = 0;
-            if (!repeat && input.IsKeyPress(up) || repeat && input.IsKeyDown(up))
+            if (!repeat && input.Keyboard.IsPress(up) || repeat && input.Keyboard.IsDown(up))
             {
                 v = step;
                 isModified = true;
             }
-            if (!repeat && input.IsKeyPress(down) || repeat && input.IsKeyDown(down))
+            if (!repeat && input.Keyboard.IsPress(down) || repeat && input.Keyboard.IsDown(down))
             {
                 v = -step;
                 isModified = true;
@@ -398,12 +399,12 @@ namespace Metaballs
         private int HandleIntInput(Keys down, Keys up, int step, int value, ref bool isModified, bool repeat = false)
         {
             int v = 0;
-            if (!repeat && input.IsKeyPress(up) || repeat && input.IsKeyDown(up))
+            if (!repeat && input.Keyboard.IsPress(up) || repeat && input.Keyboard.IsDown(up))
             {
                 v = step;
                 isModified = true;
             }
-            if (!repeat && input.IsKeyPress(down) || repeat && input.IsKeyDown(down))
+            if (!repeat && input.Keyboard.IsPress(down) || repeat && input.Keyboard.IsDown(down))
             {
                 v = -step;
                 isModified = true;
@@ -414,18 +415,18 @@ namespace Metaballs
         private Color HandleColorInput(Keys keyR, Keys keyG, Keys keyB, Color c, ref bool isModified)
         {
             Color color = c;
-            int v = input.IsCtrlDown ? 1 : -1;
-            if (input.IsKeyDown(keyR))
+            int v = input.Keyboard.IsCtrlDown ? 1 : -1;
+            if (input.Keyboard.IsDown(keyR))
             {
                 color = new Color((color.R + v).Clamp(0, 255), color.G, color.B, color.A);
                 isModified = true;
             }
-            if (input.IsKeyDown(keyG))
+            if (input.Keyboard.IsDown(keyG))
             {
                 color = new Color(color.R, (color.G + v).Clamp(0, 255), color.B, color.A);
                 isModified = true;
             }
-            if (input.IsKeyDown(keyB))
+            if (input.Keyboard.IsDown(keyB))
             {
                 color = new Color(color.R, color.G, (color.B + v).Clamp(0, 255), color.A);
                 isModified = true;
@@ -435,10 +436,10 @@ namespace Metaballs
 
         private void HandleMouseInput()
         {
-            var position = input.MouseState.Position.ToVector2();
-            if (input.IsMouseButtonRelease(InputManager.MouseButton.LEFT))
+            var position = input.Mouse.Position.ToVector2();
+            if (input.Mouse.IsRelease(Mouse.Button.LEFT))
                 MouseUp();
-            else if (input.IsMouseButtonPress(InputManager.MouseButton.LEFT))
+            else if (input.Mouse.IsPress(Mouse.Button.LEFT))
                 MouseDown(position);
 
             MouseMove(position);
