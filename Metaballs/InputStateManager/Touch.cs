@@ -41,7 +41,7 @@ namespace Metaballs.InputStateManager
 
         private Mouse mouse;
         private TouchCollection touchCollection;
-        private List<GestureSample> gestures = new List<GestureSample>(4);
+        public List<GestureSample> Gestures { get; } = new List<GestureSample>();
         private DateTime pressTimestamp;
 
         public TouchCollection TouchCollection => touchCollection;
@@ -60,13 +60,13 @@ namespace Metaballs.InputStateManager
             touchCollection = TouchPanel.GetState();
 
             IsGestureAvailable = false;
+            Gestures.Clear();
             if (TouchPanel.EnabledGestures != GestureType.None)
             {
                 IsGestureAvailable = TouchPanel.IsGestureAvailable;
-                gestures.Clear();
                 while (TouchPanel.IsGestureAvailable)
                 {
-                    gestures.Add(TouchPanel.ReadGesture());
+                    Gestures.Add(TouchPanel.ReadGesture());
                 }
             }
 
@@ -107,39 +107,36 @@ namespace Metaballs.InputStateManager
         /// </summary>
         private void EmulateGestures()
         {
-            if (TouchPanel.EnabledGestures == GestureType.None) return;
             if (touchLocation.State == TouchLocationState.Invalid) return;
 
             Vector2 delta = touchLocation.Position - oldTouchLocation.Position;
 
-            bool pressing = touchLocation.State == TouchLocationState.Pressed &&
+            bool pressed = touchLocation.State == TouchLocationState.Pressed &&
                             (oldTouchLocation.State == TouchLocationState.Released ||
                              oldTouchLocation.State == TouchLocationState.Invalid);
-            bool releasing = touchLocation.State == TouchLocationState.Released &&
+            bool released = touchLocation.State == TouchLocationState.Released &&
                              (oldTouchLocation.State == TouchLocationState.Pressed ||
                               oldTouchLocation.State == TouchLocationState.Moved);
 
-            if (pressing) pressTimestamp = DateTime.Now;
+            if (pressed) pressTimestamp = DateTime.Now;
             TimeSpan pressDuration = DateTime.Now - pressTimestamp;
 
-            if (releasing)
+            if (released)
             {
-                if ((TouchPanel.EnabledGestures & GestureType.Tap) != GestureType.None && delta == Vector2.Zero &&
-                    pressDuration < MaxTapDuration)
+                if (delta == Vector2.Zero && pressDuration < MaxTapDuration)
                 {
-                    gestures.Add(new GestureSample(GestureType.Tap, TimeSpan.Zero,
+                    Gestures.Add(new GestureSample(GestureType.Tap, TimeSpan.Zero,
                         touchLocation.Position, Vector2.Zero,
                         Vector2.Zero, Vector2.Zero));
                     IsGestureAvailable = true;
                 }
             }
 
-            if (touchLocation.State == TouchLocationState.Moved &&
-                oldTouchLocation.State == TouchLocationState.Moved)
+            if (touchLocation.State == TouchLocationState.Moved && oldTouchLocation.State == TouchLocationState.Moved)
             {
-                if ((TouchPanel.EnabledGestures & GestureType.Hold) != GestureType.None && delta == Vector2.Zero)
+                if (delta == Vector2.Zero)
                 {
-                    gestures.Add(new GestureSample(GestureType.Hold, TimeSpan.Zero,
+                    Gestures.Add(new GestureSample(GestureType.Hold, TimeSpan.Zero,
                         touchLocation.Position, Vector2.Zero,
                         Vector2.Zero, Vector2.Zero));
                     IsGestureAvailable = true;
@@ -148,33 +145,28 @@ namespace Metaballs.InputStateManager
 
             if (touchLocation.State == TouchLocationState.Moved)
             {
-                if ((TouchPanel.EnabledGestures & GestureType.HorizontalDrag) != GestureType.None &&
-                    !(Math.Abs(delta.X - 0f) < float.Epsilon))
+                if (!(Math.Abs(delta.X - 0f) < float.Epsilon))
                 {
-                    gestures.Add(new GestureSample(GestureType.HorizontalDrag, TimeSpan.Zero,
+                    Gestures.Add(new GestureSample(GestureType.HorizontalDrag, TimeSpan.Zero,
                         touchLocation.Position, Vector2.Zero,
                         delta, Vector2.Zero));
                     IsGestureAvailable = true;
                 }
-                if ((TouchPanel.EnabledGestures & GestureType.FreeDrag) != GestureType.None && delta != Vector2.Zero)
+                if (delta != Vector2.Zero)
                 {
-                    gestures.Add(new GestureSample(GestureType.FreeDrag, TimeSpan.Zero,
+                    Gestures.Add(new GestureSample(GestureType.FreeDrag, TimeSpan.Zero,
                         touchLocation.Position, Vector2.Zero,
                         delta, Vector2.Zero));
                     IsGestureAvailable = true;
                 }
             }
 
-            if (touchLocation.State == TouchLocationState.Released &&
-                oldTouchLocation.State == TouchLocationState.Moved)
+            if (touchLocation.State == TouchLocationState.Released && oldTouchLocation.State == TouchLocationState.Moved)
             {
-                if ((TouchPanel.EnabledGestures & GestureType.DragComplete) != GestureType.None)
-                {
-                    gestures.Add(new GestureSample(GestureType.DragComplete, TimeSpan.Zero,
-                        touchLocation.Position, Vector2.Zero,
-                        Vector2.Zero, Vector2.Zero));
-                    IsGestureAvailable = true;
-                }
+                Gestures.Add(new GestureSample(GestureType.DragComplete, TimeSpan.Zero,
+                    touchLocation.Position, Vector2.Zero,
+                    Vector2.Zero, Vector2.Zero));
+                IsGestureAvailable = true;
             }
         }
     }

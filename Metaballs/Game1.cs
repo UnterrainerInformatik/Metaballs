@@ -32,6 +32,7 @@ using Metaballs.InputStateManager;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Microsoft.Xna.Framework.Input.Touch;
 using tainicom.Aether.Physics2D.Collision.Shapes;
 using tainicom.Aether.Physics2D.Controllers;
 using tainicom.Aether.Physics2D.Dynamics;
@@ -278,7 +279,7 @@ namespace Metaballs
                     }
                     if (fixture.Shape.ShapeType == ShapeType.Circle)
                     {
-                        CircleShape circle = (CircleShape)fixture.Shape;
+                        CircleShape circle = (CircleShape) fixture.Shape;
                         spriteBatch.DrawCircle(circle.Position, circle.Radius, 30, Color.AntiqueWhite, 2f, 1f);
                     }
                 }
@@ -305,7 +306,7 @@ namespace Metaballs
             }
             spriteBatch.End();
         }
-        
+
         /// <summary>
         ///     Draws a faint glow behind the metaballs. We accomplish this by rendering the metaball texture without threshholding
         ///     it. This is purely aesthetic.
