@@ -30,7 +30,7 @@ using JetBrains.Annotations;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
-namespace Metaballs
+namespace Metaballs.InputStateManager
 {
     [PublicAPI]
     public class InputManager
@@ -45,29 +45,41 @@ namespace Metaballs
         public MouseState OldMouseState { get; set; }
         public MouseState MouseState { get; set; }
 
-        public GamePadState OldGamePadState { get; set; }
-        public GamePadState GamePadState { get; set; }
+        public GamePadStates GamePadStates { get; set; } = new GamePadStates();
 
         public KeyboardState OldKeyboardState { get; set; }
         public KeyboardState KeyboardState { get; set; }
 
-        public bool IsKeyPress(Keys key) => KeyboardState.IsKeyDown(key) && OldKeyboardState.IsKeyUp(key);
+        public GamePadState OldGamePadState(PlayerIndex p = PlayerIndex.One) => GamePadStates.GetOld(p);
+        public GamePadState GamePadState(PlayerIndex p = PlayerIndex.One) => GamePadStates.Get(p);
+
         public bool IsKeyDown(Keys key) => KeyboardState.IsKeyDown(key);
         public bool IsKeyUp(Keys key) => KeyboardState.IsKeyUp(key);
+        public bool IsKeyPress(Keys key) => KeyboardState.IsKeyDown(key) && OldKeyboardState.IsKeyUp(key);
+        public bool IsKeyRelease(Keys key) => OldKeyboardState.IsKeyDown(key) && KeyboardState.IsKeyUp(key);
 
         public bool IsShiftDown => IsKeyDown(Keys.LeftShift) || IsKeyDown(Keys.RightShift);
         public bool IsCtrlDown => IsKeyDown(Keys.LeftControl) || IsKeyDown(Keys.RightControl);
         public bool IsAltDown => IsKeyDown(Keys.LeftAlt) || IsKeyDown(Keys.RightAlt);
 
-        public bool IsButtonPress(Buttons button)
-            => GamePadState.IsButtonDown(button) && OldGamePadState.IsButtonUp(button);
-        public bool IsButtonDown(Buttons button) => GamePadState.IsButtonDown(button);
-        public bool IsButtonUp(Buttons button) => GamePadState.IsButtonUp(button);
+        public bool IsConnected(PlayerIndex p = PlayerIndex.One) => GamePadState(p).IsConnected;
+        public bool IsButtonDown(Buttons button, PlayerIndex p = PlayerIndex.One)
+            => GamePadState(p).IsButtonDown(button);
+        public bool IsButtonUp(Buttons button, PlayerIndex p = PlayerIndex.One)
+            => GamePadState(p).IsButtonUp(button);
+        public bool IsButtonPress(Buttons button, PlayerIndex p = PlayerIndex.One)
+            => GamePadState(p).IsButtonDown(button) && OldGamePadState(p).IsButtonUp(button);
+        public bool IsButtonRelease(Buttons button, PlayerIndex p = PlayerIndex.One)
+            => OldGamePadState(p).IsButtonDown(button) && GamePadState(p).IsButtonUp(button);
+
+        public bool IsMouseButtonUp(MouseButton button) => IsMouseButtonUp(MouseState, button);
+        public bool IsMouseButtonDown(MouseButton button) => IsMouseButtonDown(MouseState, button);
 
         public bool IsMouseButtonPress(MouseButton button)
             => IsMouseButtonDown(MouseState, button) && IsMouseButtonUp(OldMouseState, button);
-        public bool IsMouseButtonUp(MouseButton button) => IsMouseButtonUp(MouseState, button);
-        public bool IsMouseButtonDown(MouseButton button) => IsMouseButtonDown(MouseState, button);
+
+        public bool IsMouseButtonRelease(MouseButton button)
+            => IsMouseButtonDown(OldMouseState, button) && IsMouseButtonUp(MouseState, button);
 
         private bool IsMouseButtonUp(MouseState state, MouseButton button)
         {
@@ -104,8 +116,7 @@ namespace Metaballs
             OldMouseState = MouseState;
             MouseState = Mouse.GetState();
 
-            OldGamePadState = GamePadState;
-            GamePadState = GamePad.GetState(PlayerIndex.One);
+            GamePadStates.Update();
 
             OldKeyboardState = KeyboardState;
             KeyboardState = Keyboard.GetState();

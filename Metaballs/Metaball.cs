@@ -28,6 +28,9 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using tainicom.Aether.Physics2D.Controllers;
+using tainicom.Aether.Physics2D.Dynamics;
+using tainicom.Aether.Physics2D.Fluids;
 
 namespace Metaballs
 {
@@ -37,9 +40,10 @@ namespace Metaballs
         public Vector2 Origin => new Vector2(Texture.Width, Texture.Height) / 2f;
         public Vector2 Trajectory { get; set; }
         public float Velocity { get; set; }
+        public Particle Particle { get; set; }
 
         public Texture2D Texture { get; set; }
-
+        
         public void Initialize(int seed)
         {
             Random rand = new Random(seed);
@@ -47,9 +51,16 @@ namespace Metaballs
             Trajectory.Normalize();
             Position = new Vector2(rand.Next(0, 700), rand.Next(0, 700));
             Velocity = rand.Next(100, 4000) / 1000f;
+
+            Particle = new Particle(Position.X, Position.Y);
         }
 
-        public void ConstrainAndReflect(Point bounds)
+        public void Remove()
+        {
+            //World.Fluid.Particles.Remove(Particle);
+        }
+
+        private void ConstrainAndReflect(Point bounds)
         {
             if (Position.X <= 0)
             {
@@ -73,9 +84,18 @@ namespace Metaballs
             }
         }
 
-        public void Update(GameTime gameTime)
+        public void Update(GameTime gameTime, Point bounds, bool isGravity)
         {
-            Position = Position + Trajectory * Velocity;
+            if (isGravity)
+            {
+                Position = Particle.Position;
+            }
+            else
+            {
+                Position = Position + Trajectory * Velocity;
+                Particle.Position = Position;
+                ConstrainAndReflect(bounds);
+            }
         }
     }
 }

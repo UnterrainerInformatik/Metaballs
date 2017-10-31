@@ -28,9 +28,15 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Metaballs.InputStateManager;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using tainicom.Aether.Physics2D.Collision.Shapes;
+using tainicom.Aether.Physics2D.Controllers;
+using tainicom.Aether.Physics2D.Dynamics;
+using tainicom.Aether.Physics2D.Dynamics.Joints;
+using Utilities;
 
 namespace Metaballs
 {
@@ -52,25 +58,53 @@ namespace Metaballs
         private AlphaTestEffect alphaTest;
         private readonly Random rand = new Random();
 
+        private bool isGravity;
         private Preset preset;
         private int numberOfMetaballs = 120;
 
+        private readonly World world;
+
+        private ParticleHydrodynamicsController controller;
+        private FixedMouseJoint fixedMouseJoint;
 
         private readonly InputManager input = new InputManager();
 
         public Game1()
         {
             var graphics = new GraphicsDeviceManager(this);
+            graphics.PreferMultiSampling = true;
             graphics.PreferredBackBufferWidth = MIN_SCREEN_RESOLUTION_WIDTH;
             graphics.PreferredBackBufferHeight = MIN_SCREEN_RESOLUTION_HEIGHT;
             graphics.IsFullScreen = false;
             graphics.PreparingDeviceSettings += PrepareDeviceSettings;
+            graphics.SynchronizeWithVerticalRetrace = true;
+
+            IsMouseVisible = true;
+            IsFixedTimeStep = true;
+
             Content.RootDirectory = "Content";
+
+            world = new World(new Vector2(0f, 9.80665f));
+            var w = graphics.PreferredBackBufferWidth;
+            var h = graphics.PreferredBackBufferHeight;
+            world.CreateEdge(new Vector2(0f, 0f), new Vector2(0f, h));
+            world.CreateEdge(new Vector2(0f, h), new Vector2(w, h));
+            world.CreateEdge(new Vector2(w, h), new Vector2(w, 0f));
+            world.CreateEdge(new Vector2(w, 0f), new Vector2(0f, 0f));
+            world.CreateCircle(30, 0.0005f, new Vector2(500f, 500f), BodyType.Dynamic);
+
+            world.JointRemoved += JointRemoved;
         }
 
         void PrepareDeviceSettings(object sender, PreparingDeviceSettingsEventArgs e)
         {
             e.GraphicsDeviceInformation.GraphicsProfile = GraphicsProfile.HiDef;
+        }
+
+        protected virtual void JointRemoved(World sender, Joint joint)
+        {
+            if (fixedMouseJoint == joint)
+                fixedMouseJoint = null;
         }
 
         /// <summary>
@@ -83,6 +117,10 @@ namespace Metaballs
         {
             metaballTarget = new RenderTarget2D(GraphicsDevice, GraphicsDevice.Viewport.Width,
                 GraphicsDevice.Viewport.Height);
+
+            controller = new ParticleHydrodynamics2Controller(2.0f, 2048);
+            world.Add(controller);
+
             base.Initialize();
         }
 
@@ -146,7 +184,13 @@ namespace Metaballs
             /*metaballTexture = Utils.CreateMetaballTexture(120, Utils.CreateFalloffFunctionCircle(1f, 1f),
                 Utils.CreateFalloffFunctionCircle(0.6f, 0.8f), Utils.CreateSingleColorFunction(Color.White),
                 GraphicsDevice);*/
+            foreach (var metaball in metaballs)
+            {
+                metaball.Remove();
+            }
             metaballs.Clear();
+            if (world.Fluid.Particles.Count > 0)
+                world.Fluid.Particles.Clear();
             numberOfMetaballs = 120;
             InitializeMetaballs(numberOfMetaballs);
         }
@@ -160,7 +204,9 @@ namespace Metaballs
 
             while (numberOfMetaballs < metaballs.Count)
             {
-                metaballs.RemoveAt(metaballs.Count - 1);
+                var m = metaballs[metaballs.Count - 1];
+                metaballs.Remove(m);
+                m.Remove();
             }
         }
 
@@ -181,11 +227,16 @@ namespace Metaballs
         protected override void Update(GameTime gameTime)
         {
             HandleInput();
+            HandleMouseInput();
+            if (isGravity)
+            {
+                float timeStep = Math.Min((float) gameTime.ElapsedGameTime.TotalMilliseconds * 0.001f, 1f / 30f);
+                world.Step(timeStep);
+            }
 
             foreach (var metaball in metaballs)
             {
-                metaball.Update(gameTime);
-                metaball.ConstrainAndReflect(Bounds);
+                metaball.Update(gameTime, Bounds, isGravity);
             }
 
             base.Update(gameTime);
@@ -202,13 +253,36 @@ namespace Metaballs
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(Color.Black);
             DrawMetaballsGlow(preset.GlowFactor);
+
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, null, null, null, alphaTest);
             spriteBatch.Draw(metaballTarget, Vector2.Zero, Color.White);
             spriteBatch.End();
 
             DrawText();
-
+            DrawShapes();
             base.Draw(gameTime);
+        }
+
+        private void DrawShapes()
+        {
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+            foreach (var body in world.BodyList)
+            {
+                foreach (var fixture in body.FixtureList)
+                {
+                    if (fixture.Shape.ShapeType == ShapeType.Edge)
+                    {
+                        EdgeShape edge = (EdgeShape) fixture.Shape;
+                        spriteBatch.DrawLine(edge.Vertex1, edge.Vertex2, Color.White, 1f, 1f);
+                    }
+                    if (fixture.Shape.ShapeType == ShapeType.Circle)
+                    {
+                        CircleShape circle = (CircleShape)fixture.Shape;
+                        spriteBatch.DrawCircle(circle.Position, circle.Radius, 30, Color.AntiqueWhite, 2f, 1f);
+                    }
+                }
+            }
+            spriteBatch.End();
         }
 
         private void DrawMetaballs(RenderTarget2D target)
@@ -217,11 +291,20 @@ namespace Metaballs
             GraphicsDevice.Clear(Color.Transparent);
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive);
-            foreach (var metaball in metaballs)
-                spriteBatch.Draw(metaball.Texture, metaball.Position - metaball.Origin, Color.White);
+            if (isGravity)
+            {
+                var origin = new Vector2(metaballTexture.Width, metaballTexture.Height) / 2f;
+                for (int i = 0; i < controller.ParticleCount; i++)
+                    spriteBatch.Draw(metaballTexture, controller.GetParticlePosition(i) - origin, Color.White);
+            }
+            else
+            {
+                foreach (var metaball in metaballs)
+                    spriteBatch.Draw(metaball.Texture, metaball.Position - metaball.Origin, Color.White);
+            }
             spriteBatch.End();
         }
-
+        
         /// <summary>
         ///     Draws a faint glow behind the metaballs. We accomplish this by rendering the metaball texture without threshholding
         ///     it. This is purely aesthetic.
@@ -229,12 +312,22 @@ namespace Metaballs
         /// <param name="weight">The weight.</param>
         private void DrawMetaballsGlow(float weight)
         {
+            Color tint = new Color(preset.Glow.ToVector3() * weight);
+            var origin = new Vector2(metaballTexture.Width, metaballTexture.Height) / 2f;
+
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive);
-            foreach (var metaball in metaballs)
+            if (isGravity)
             {
-                Color tint = new Color(preset.Glow.ToVector3() * weight);
-                spriteBatch.Draw(metaball.Texture, metaball.Position - metaball.Origin, null, tint, 0f, Vector2.Zero, 1f,
-                    SpriteEffects.None, 0f);
+                for (int i = 0; i < controller.ParticleCount; i++)
+                    spriteBatch.Draw(metaballTexture, controller.GetParticlePosition(i) - origin, tint);
+            }
+            else
+            {
+                foreach (var metaball in metaballs)
+                {
+                    spriteBatch.Draw(metaball.Texture, metaball.Position - metaball.Origin, null, tint, 0f, Vector2.Zero,
+                        1f, SpriteEffects.None, 0f);
+                }
             }
             spriteBatch.End();
         }
@@ -246,10 +339,25 @@ namespace Metaballs
                 Exit();
             if (input.IsKeyPress(Keys.R)) Reset(Preset.Lava());
             if (input.IsKeyPress(Keys.T)) Reset(Preset.Water());
+            if (input.IsKeyPress(Keys.G))
+            {
+                isGravity = !isGravity;
+                if (isGravity)
+                {
+                    world.Remove(controller);
+                    controller = new ParticleHydrodynamics2Controller(2.0f, 2048);
+                    world.Add(controller);
+                    foreach (var metaball in metaballs)
+                    {
+                        controller.AddParticle(metaball.Position, metaball.Trajectory * metaball.Velocity);
+                    }
+                }
+            }
 
             bool valModified = false;
             preset.GlowFactor = HandleFloatInput(Keys.Q, Keys.W, .1f, preset.GlowFactor, ref valModified).Clamp(0f, 1f);
-            numberOfMetaballs = HandleIntInput(Keys.A, Keys.S, 1, numberOfMetaballs, ref valModified).Clamp(0, int.MaxValue);
+            numberOfMetaballs = HandleIntInput(Keys.A, Keys.S, 1, numberOfMetaballs, ref valModified)
+                .Clamp(0, int.MaxValue);
 
             bool textureModified = false;
             preset.Glow = HandleColorInput(Keys.NumPad7, Keys.NumPad8, Keys.NumPad9, preset.Glow, ref textureModified);
@@ -257,9 +365,12 @@ namespace Metaballs
                 ref textureModified);
             preset.GradientOuter = HandleColorInput(Keys.NumPad1, Keys.NumPad2, Keys.NumPad3, preset.GradientOuter,
                 ref textureModified);
-            preset.MaxDistance = HandleFloatInput(Keys.Y, Keys.X, .01f, preset.MaxDistance, ref textureModified, true).Clamp(0f, 1f);
-            preset.ScalingFactor = HandleFloatInput(Keys.C, Keys.V, .01f, preset.ScalingFactor, ref textureModified, true).Clamp(0f, 1f);
-            preset.Size = HandleIntInput(Keys.B, Keys.N, 1, preset.Size, ref textureModified, true).Clamp(0, int.MaxValue);
+            preset.MaxDistance =
+                HandleFloatInput(Keys.Y, Keys.X, .01f, preset.MaxDistance, ref textureModified, true).Clamp(0f, 1f);
+            preset.ScalingFactor =
+                HandleFloatInput(Keys.C, Keys.V, .01f, preset.ScalingFactor, ref textureModified, true).Clamp(0f, 1f);
+            preset.Size = HandleIntInput(Keys.B, Keys.N, 1, preset.Size, ref textureModified, true)
+                .Clamp(0, int.MaxValue);
             if (textureModified)
             {
                 RecreateTexture();
@@ -267,15 +378,16 @@ namespace Metaballs
             AdjustNumberOfMetaballs();
         }
 
-        private float HandleFloatInput(Keys down, Keys up, float step, float value, ref bool isModified, bool repeat = false)
+        private float HandleFloatInput(Keys down, Keys up, float step, float value, ref bool isModified,
+            bool repeat = false)
         {
             float v = 0;
-            if (!repeat && input.IsKeyPress(up)||repeat && input.IsKeyDown(up))
+            if (!repeat && input.IsKeyPress(up) || repeat && input.IsKeyDown(up))
             {
                 v = step;
                 isModified = true;
             }
-            if (!repeat && input.IsKeyPress(down)||repeat && input.IsKeyDown(down))
+            if (!repeat && input.IsKeyPress(down) || repeat && input.IsKeyDown(down))
             {
                 v = -step;
                 isModified = true;
@@ -321,10 +433,54 @@ namespace Metaballs
             return color;
         }
 
+        private void HandleMouseInput()
+        {
+            var position = input.MouseState.Position.ToVector2();
+            if (input.IsMouseButtonRelease(InputManager.MouseButton.LEFT))
+                MouseUp();
+            else if (input.IsMouseButtonPress(InputManager.MouseButton.LEFT))
+                MouseDown(position);
+
+            MouseMove(position);
+        }
+
+        private void MouseDown(Vector2 p)
+        {
+            if (fixedMouseJoint != null)
+                return;
+
+            Fixture fixture = world.TestPoint(p);
+
+            if (fixture != null)
+            {
+                Body body = fixture.Body;
+                fixedMouseJoint = new FixedMouseJoint(body, p);
+                fixedMouseJoint.MaxForce = 1000.0f * body.Mass;
+                world.Add(fixedMouseJoint);
+                body.Awake = true;
+            }
+        }
+
+        private void MouseUp()
+        {
+            if (fixedMouseJoint != null)
+            {
+                world.Remove(fixedMouseJoint);
+                fixedMouseJoint = null;
+            }
+        }
+
+        private void MouseMove(Vector2 p)
+        {
+            if (fixedMouseJoint != null)
+                fixedMouseJoint.WorldAnchorB = p;
+        }
+
         private void DrawText()
         {
             StringBuilder b = new StringBuilder();
             b.Append("Reset Scene: Lava(r), Water(t)\n");
+            b.Append($"Gravity: {isGravity} (g)\n");
             b.Append($"Number of Metaballs: {numberOfMetaballs} <(a), >(s)\n");
             b.Append($"GlowFactor: {preset.GlowFactor:0.##} <(q), >(w)\n");
             b.Append($"GlowColor: {preset.Glow} <(num789), >(ctrl)(num789)\n");
