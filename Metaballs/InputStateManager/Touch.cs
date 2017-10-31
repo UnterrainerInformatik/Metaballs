@@ -36,138 +36,44 @@ namespace Metaballs.InputStateManager
     [PublicAPI]
     public class Touch
     {
-        private TouchLocation touchLocation;
-        private TouchLocation oldTouchLocation;
+        private bool emulateWithMouse;
+        public TouchCollection TouchCollection { get; private set; }
+        public TouchCollection OldTouchCollection { get; private set; }
+        
+        public int DisplayHeight => TouchPanel.DisplayHeight;
+        public int DisplayWidth => TouchPanel.DisplayWidth;
+        public DisplayOrientation DisplayOrientation => TouchPanel.DisplayOrientation;
+        public bool IsGestureAvailable => TouchPanel.IsGestureAvailable;
+        public bool EnableMouseGestures => TouchPanel.EnableMouseGestures;
+        public bool EnableMouseTouchPoint => TouchPanel.EnableMouseTouchPoint;
+        public GestureType EnabledGestures => TouchPanel.EnabledGestures;
+        public IntPtr WindowHandle => TouchPanel.WindowHandle;
 
-        private Mouse mouse;
-        private TouchCollection touchCollection;
-        public List<GestureSample> Gestures { get; } = new List<GestureSample>();
-        private DateTime pressTimestamp;
+        public TouchPanelCapabilities GetCapabilities => TouchPanel.GetCapabilities();
 
-        public TouchCollection TouchCollection => touchCollection;
-        public TimeSpan MaxTapDuration = TimeSpan.FromMilliseconds(600);
+        public GestureSample ReadGesture() => TouchPanel.ReadGesture();
 
-        public bool IsGestureAvailable { get; set; }
-        public bool IsMouseEmulation { get; set; } = true;
-
-        public Touch(Mouse mouse)
+        public bool EmulateWithMouse
         {
-            this.mouse = mouse;
+            get { return emulateWithMouse; }
+            set
+            {
+                if (!emulateWithMouse)
+                {
+                    TouchPanel.EnabledGestures = GestureType.Hold | GestureType.Tap | GestureType.DoubleTap |
+                                             GestureType.DragComplete | GestureType.Flick | GestureType.FreeDrag |
+                                             GestureType.HorizontalDrag | GestureType.VerticalDrag;
+                    TouchPanel.EnableMouseGestures = true;
+                    TouchPanel.EnableMouseTouchPoint = true;
+                }
+                emulateWithMouse = value;
+            }
         }
 
         public void Update()
         {
-            touchCollection = TouchPanel.GetState();
-
-            IsGestureAvailable = false;
-            Gestures.Clear();
-            if (TouchPanel.EnabledGestures != GestureType.None)
-            {
-                IsGestureAvailable = TouchPanel.IsGestureAvailable;
-                while (TouchPanel.IsGestureAvailable)
-                {
-                    Gestures.Add(TouchPanel.ReadGesture());
-                }
-            }
-
-            if (IsMouseEmulation)
-            {
-                EmulateState();
-                EmulateGestures();
-            }
-        }
-
-        private void EmulateState()
-        {
-            Vector2 position = mouse.Position.ToVector2();
-            oldTouchLocation = touchLocation;
-
-            if (mouse.IsPress(Mouse.Button.LEFT))
-                touchLocation = new TouchLocation(10000, TouchLocationState.Pressed, position);
-            if (mouse.IsDown(Mouse.Button.LEFT) && mouse.IsOldDown(Mouse.Button.LEFT))
-                touchLocation = new TouchLocation(touchLocation.Id, TouchLocationState.Moved,
-                    position, touchLocation.State, touchLocation.Position);
-            if (mouse.IsUp(Mouse.Button.LEFT) && mouse.IsOldDown(Mouse.Button.LEFT))
-                touchLocation = new TouchLocation(touchLocation.Id, TouchLocationState.Released,
-                    position, touchLocation.State, touchLocation.Position);
-            if (mouse.IsUp(Mouse.Button.LEFT) && mouse.IsOldUp(Mouse.Button.LEFT))
-                touchLocation = new TouchLocation();
-
-            if (touchLocation.State != TouchLocationState.Invalid)
-            {
-                TouchLocation[] touchLocationArray = new TouchLocation[touchCollection.Count + 1];
-                touchCollection.CopyTo(touchLocationArray, 0);
-                touchLocationArray[touchLocationArray.Length - 1] = touchLocation;
-                touchCollection = new TouchCollection(touchLocationArray);
-            }
-        }
-
-        /// <summary>
-        ///     Emulates tap, hold, moved, horizontalDrag, freeDrag and dragComplete only.
-        /// </summary>
-        private void EmulateGestures()
-        {
-            if (touchLocation.State == TouchLocationState.Invalid) return;
-
-            Vector2 delta = touchLocation.Position - oldTouchLocation.Position;
-
-            bool pressed = touchLocation.State == TouchLocationState.Pressed &&
-                            (oldTouchLocation.State == TouchLocationState.Released ||
-                             oldTouchLocation.State == TouchLocationState.Invalid);
-            bool released = touchLocation.State == TouchLocationState.Released &&
-                             (oldTouchLocation.State == TouchLocationState.Pressed ||
-                              oldTouchLocation.State == TouchLocationState.Moved);
-
-            if (pressed) pressTimestamp = DateTime.Now;
-            TimeSpan pressDuration = DateTime.Now - pressTimestamp;
-
-            if (released)
-            {
-                if (delta == Vector2.Zero && pressDuration < MaxTapDuration)
-                {
-                    Gestures.Add(new GestureSample(GestureType.Tap, TimeSpan.Zero,
-                        touchLocation.Position, Vector2.Zero,
-                        Vector2.Zero, Vector2.Zero));
-                    IsGestureAvailable = true;
-                }
-            }
-
-            if (touchLocation.State == TouchLocationState.Moved && oldTouchLocation.State == TouchLocationState.Moved)
-            {
-                if (delta == Vector2.Zero)
-                {
-                    Gestures.Add(new GestureSample(GestureType.Hold, TimeSpan.Zero,
-                        touchLocation.Position, Vector2.Zero,
-                        Vector2.Zero, Vector2.Zero));
-                    IsGestureAvailable = true;
-                }
-            }
-
-            if (touchLocation.State == TouchLocationState.Moved)
-            {
-                if (!(Math.Abs(delta.X - 0f) < float.Epsilon))
-                {
-                    Gestures.Add(new GestureSample(GestureType.HorizontalDrag, TimeSpan.Zero,
-                        touchLocation.Position, Vector2.Zero,
-                        delta, Vector2.Zero));
-                    IsGestureAvailable = true;
-                }
-                if (delta != Vector2.Zero)
-                {
-                    Gestures.Add(new GestureSample(GestureType.FreeDrag, TimeSpan.Zero,
-                        touchLocation.Position, Vector2.Zero,
-                        delta, Vector2.Zero));
-                    IsGestureAvailable = true;
-                }
-            }
-
-            if (touchLocation.State == TouchLocationState.Released && oldTouchLocation.State == TouchLocationState.Moved)
-            {
-                Gestures.Add(new GestureSample(GestureType.DragComplete, TimeSpan.Zero,
-                    touchLocation.Position, Vector2.Zero,
-                    Vector2.Zero, Vector2.Zero));
-                IsGestureAvailable = true;
-            }
+            OldTouchCollection = TouchCollection;
+            TouchCollection = TouchPanel.GetState();   
         }
     }
 }

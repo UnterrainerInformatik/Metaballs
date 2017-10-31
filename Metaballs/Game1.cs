@@ -69,7 +69,7 @@ namespace Metaballs
         private ParticleHydrodynamicsController controller;
         private FixedMouseJoint fixedMouseJoint;
 
-        private readonly InputManager input = new InputManager();
+        private readonly InputManager input;
 
         public Game1()
         {
@@ -96,6 +96,7 @@ namespace Metaballs
             world.CreateCircle(30, 0.0005f, new Vector2(500f, 500f), BodyType.Dynamic);
 
             world.JointRemoved += JointRemoved;
+            input = new InputManager();
         }
 
         void PrepareDeviceSettings(object sender, PreparingDeviceSettingsEventArgs e)
@@ -491,7 +492,7 @@ namespace Metaballs
             b.Append($"Texture_MaxDistance: {preset.MaxDistance:0.##} <(y), >(x)\n");
             b.Append($"Texture_ScalingFactor: {preset.ScalingFactor:0.##} <(c), >(v)\n");
             b.Append($"Texture_Size: {preset.Size} <(b), >(n)\n");
-
+            
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
             spriteBatch.DrawString(font, b, new Vector2(10, 10), Color.White);
             spriteBatch.End();
