@@ -35,8 +35,13 @@ namespace Metaballs.InputStateManager
         public Mouse Mouse { get; set; } = new Mouse();
         public GamePad GamePad { get; set; } = new GamePad();
         public Keyboard Keyboard { get; set; } = new Keyboard();
-        public Touch Touch { get; set; } = new Touch();
-        
+        public Touch Touch { get; set; }
+
+        public InputManager()
+        {
+            Touch = new Touch(Mouse);
+        }
+
         public void Update()
         {
             Mouse.Update();

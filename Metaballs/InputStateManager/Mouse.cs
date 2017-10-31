@@ -53,13 +53,14 @@ namespace Metaballs.InputStateManager
             => IsDown(MouseState, button) && IsUp(OldMouseState, button);
         public bool IsRelease(Button button)
             => IsDown(OldMouseState, button) && IsUp(MouseState, button);
-
         public Point Position => MouseState.Position;
         public int ScrollWheelValue => MouseState.ScrollWheelValue;
         public int HorizontalScrollWheelValue => MouseState.HorizontalScrollWheelValue;
         public int X => MouseState.X;
         public int Y => MouseState.Y;
 
+        public bool IsOldUp(Button button) => IsUp(OldMouseState, button);
+        public bool IsOldDown(Button button) => IsDown(OldMouseState, button);
         public Point OldPosition => OldMouseState.Position;
         public int OldScrollWheelValue => OldMouseState.ScrollWheelValue;
         public int OldHorizontalScrollWheelValue => OldMouseState.HorizontalScrollWheelValue;
