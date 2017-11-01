@@ -26,7 +26,6 @@
 // ***************************************************************************
 
 using System;
-using System.Collections.Generic;
 using JetBrains.Annotations;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input.Touch;
@@ -36,10 +35,9 @@ namespace Metaballs.InputStateManager
     [PublicAPI]
     public class Touch
     {
-        private bool emulateWithMouse;
         public TouchCollection TouchCollection { get; private set; }
         public TouchCollection OldTouchCollection { get; private set; }
-        
+
         public int DisplayHeight => TouchPanel.DisplayHeight;
         public int DisplayWidth => TouchPanel.DisplayWidth;
         public DisplayOrientation DisplayOrientation => TouchPanel.DisplayOrientation;
@@ -53,6 +51,8 @@ namespace Metaballs.InputStateManager
 
         public GestureSample ReadGesture() => TouchPanel.ReadGesture();
 
+        private bool emulateWithMouse;
+
         public bool EmulateWithMouse
         {
             get { return emulateWithMouse; }
@@ -61,8 +61,8 @@ namespace Metaballs.InputStateManager
                 if (!emulateWithMouse)
                 {
                     TouchPanel.EnabledGestures = GestureType.Hold | GestureType.Tap | GestureType.DoubleTap |
-                                             GestureType.DragComplete | GestureType.Flick | GestureType.FreeDrag |
-                                             GestureType.HorizontalDrag | GestureType.VerticalDrag;
+                                                 GestureType.DragComplete | GestureType.Flick | GestureType.FreeDrag |
+                                                 GestureType.HorizontalDrag | GestureType.VerticalDrag;
                     TouchPanel.EnableMouseGestures = true;
                     TouchPanel.EnableMouseTouchPoint = true;
                 }
@@ -70,10 +70,10 @@ namespace Metaballs.InputStateManager
             }
         }
 
-        public void Update()
+        internal void Update()
         {
             OldTouchCollection = TouchCollection;
-            TouchCollection = TouchPanel.GetState();   
+            TouchCollection = TouchPanel.GetState();
         }
     }
 }

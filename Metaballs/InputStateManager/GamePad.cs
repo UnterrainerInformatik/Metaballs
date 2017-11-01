@@ -37,20 +37,45 @@ namespace Metaballs.InputStateManager
     {
         GamePadStates GamePadStates { get; set; } = new GamePadStates();
 
-        public GamePadState OldGamePadState(PlayerIndex p = PlayerIndex.One) => GamePadStates.GetOld(p);
-        public GamePadState GamePadState(PlayerIndex p = PlayerIndex.One) => GamePadStates.Get(p);
+        public GamePadState OldState(PlayerIndex p = PlayerIndex.One) => GamePadStates.GetOld(p);
+        public GamePadState State(PlayerIndex p = PlayerIndex.One) => GamePadStates.Get(p);
 
-        public bool IsConnected(PlayerIndex p = PlayerIndex.One) => GamePadState(p).IsConnected;
+        public bool IsConnected(PlayerIndex p = PlayerIndex.One) => State(p).IsConnected;
+
         public bool IsDown(Buttons button, PlayerIndex p = PlayerIndex.One)
-            => GamePadState(p).IsButtonDown(button);
-        public bool IsUp(Buttons button, PlayerIndex p = PlayerIndex.One)
-            => GamePadState(p).IsButtonUp(button);
-        public bool IsPress(Buttons button, PlayerIndex p = PlayerIndex.One)
-            => GamePadState(p).IsButtonDown(button) && OldGamePadState(p).IsButtonUp(button);
-        public bool IsRelease(Buttons button, PlayerIndex p = PlayerIndex.One)
-            => OldGamePadState(p).IsButtonDown(button) && GamePadState(p).IsButtonUp(button);
+            => State(p).IsButtonDown(button);
 
-        public void Update()
+        public bool IsUp(Buttons button, PlayerIndex p = PlayerIndex.One)
+            => State(p).IsButtonUp(button);
+
+        public bool IsPress(Buttons button, PlayerIndex p = PlayerIndex.One)
+            => State(p).IsButtonDown(button) && OldState(p).IsButtonUp(button);
+
+        public bool IsRelease(Buttons button, PlayerIndex p = PlayerIndex.One)
+            => OldState(p).IsButtonDown(button) && State(p).IsButtonUp(button);
+
+        public GamePadButtons Buttons(PlayerIndex p = PlayerIndex.One) => State(p).Buttons;
+        public GamePadDPad DPad(PlayerIndex p = PlayerIndex.One) => State(p).DPad;
+        public int PacketNumber(PlayerIndex p = PlayerIndex.One) => State(p).PacketNumber;
+        public GamePadThumbSticks ThumbSticks(PlayerIndex p = PlayerIndex.One) => State(p).ThumbSticks;
+        public GamePadTriggers Triggers(PlayerIndex p = PlayerIndex.One) => State(p).Triggers;
+
+        // Old states.
+        public bool IsOldConnected(PlayerIndex p = PlayerIndex.One) => OldState(p).IsConnected;
+
+        public bool IsOldDown(Buttons button, PlayerIndex p = PlayerIndex.One)
+            => OldState(p).IsButtonDown(button);
+
+        public bool IsOldUp(Buttons button, PlayerIndex p = PlayerIndex.One)
+            => OldState(p).IsButtonUp(button);
+
+        public GamePadButtons OldButtons(PlayerIndex p = PlayerIndex.One) => OldState(p).Buttons;
+        public GamePadDPad OldDPad(PlayerIndex p = PlayerIndex.One) => OldState(p).DPad;
+        public int OldPacketNumber(PlayerIndex p = PlayerIndex.One) => OldState(p).PacketNumber;
+        public GamePadThumbSticks OldThumbSticks(PlayerIndex p = PlayerIndex.One) => OldState(p).ThumbSticks;
+        public GamePadTriggers OldTriggers(PlayerIndex p = PlayerIndex.One) => OldState(p).Triggers;
+
+        internal void Update()
         {
             GamePadStates.Update();
         }

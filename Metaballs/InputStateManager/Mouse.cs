@@ -44,33 +44,36 @@ namespace Metaballs.InputStateManager
             X_BUTTON2
         }
 
-        public MouseState OldMouseState { get; set; }
-        public MouseState MouseState { get; set; }
+        public MouseState OldState { get; set; }
+        public MouseState State { get; set; }
 
-        public bool IsUp(Button button) => IsUp(MouseState, button);
-        public bool IsDown(Button button) => IsDown(MouseState, button);
+        public bool IsUp(Button button) => IsUp(State, button);
+        public bool IsDown(Button button) => IsDown(State, button);
+
         public bool IsPress(Button button)
-            => IsDown(MouseState, button) && IsUp(OldMouseState, button);
+            => IsDown(State, button) && IsUp(OldState, button);
+
         public bool IsRelease(Button button)
-            => IsDown(OldMouseState, button) && IsUp(MouseState, button);
-        public Point Position => MouseState.Position;
-        public int ScrollWheelValue => MouseState.ScrollWheelValue;
-        public int HorizontalScrollWheelValue => MouseState.HorizontalScrollWheelValue;
-        public int X => MouseState.X;
-        public int Y => MouseState.Y;
+            => IsDown(OldState, button) && IsUp(State, button);
 
-        public bool IsOldUp(Button button) => IsUp(OldMouseState, button);
-        public bool IsOldDown(Button button) => IsDown(OldMouseState, button);
-        public Point OldPosition => OldMouseState.Position;
-        public int OldScrollWheelValue => OldMouseState.ScrollWheelValue;
-        public int OldHorizontalScrollWheelValue => OldMouseState.HorizontalScrollWheelValue;
-        public int OldX => OldMouseState.X;
-        public int OldY => OldMouseState.Y;
+        public Point Position => State.Position;
+        public int ScrollWheelValue => State.ScrollWheelValue;
+        public int HorizontalScrollWheelValue => State.HorizontalScrollWheelValue;
+        public int X => State.X;
+        public int Y => State.Y;
 
-        public void Update()
+        public bool IsOldUp(Button button) => IsUp(OldState, button);
+        public bool IsOldDown(Button button) => IsDown(OldState, button);
+        public Point OldPosition => OldState.Position;
+        public int OldScrollWheelValue => OldState.ScrollWheelValue;
+        public int OldHorizontalScrollWheelValue => OldState.HorizontalScrollWheelValue;
+        public int OldX => OldState.X;
+        public int OldY => OldState.Y;
+
+        internal void Update()
         {
-            OldMouseState = MouseState;
-            MouseState = Microsoft.Xna.Framework.Input.Mouse.GetState();
+            OldState = State;
+            State = Microsoft.Xna.Framework.Input.Mouse.GetState();
         }
 
         private bool IsUp(MouseState state, Button button)

@@ -30,13 +30,13 @@ using JetBrains.Annotations;
 namespace Metaballs.InputStateManager
 {
     [PublicAPI]
-    public class InputManager
+    public class InputStateManager
     {
-        public Mouse Mouse { get; set; } = new Mouse();
-        public GamePad GamePad { get; set; } = new GamePad();
-        public Keyboard Keyboard { get; set; } = new Keyboard();
-        public Touch Touch { get; set; } = new Touch();
-        
+        public Mouse Mouse { get; } = new Mouse();
+        public GamePad GamePad { get; } = new GamePad();
+        public Keyboard Keyboard { get; } = new Keyboard();
+        public Touch Touch { get; } = new Touch();
+
         public void Update()
         {
             Mouse.Update();

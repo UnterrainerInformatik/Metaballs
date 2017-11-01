@@ -32,7 +32,6 @@ using Metaballs.InputStateManager;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using Microsoft.Xna.Framework.Input.Touch;
 using tainicom.Aether.Physics2D.Collision.Shapes;
 using tainicom.Aether.Physics2D.Controllers;
 using tainicom.Aether.Physics2D.Dynamics;
@@ -69,7 +68,7 @@ namespace Metaballs
         private ParticleHydrodynamicsController controller;
         private FixedMouseJoint fixedMouseJoint;
 
-        private readonly InputManager input;
+        private readonly InputStateManager.InputStateManager input;
 
         public Game1()
         {
@@ -96,7 +95,7 @@ namespace Metaballs
             world.CreateCircle(30, 0.0005f, new Vector2(500f, 500f), BodyType.Dynamic);
 
             world.JointRemoved += JointRemoved;
-            input = new InputManager();
+            input = new InputStateManager.InputStateManager();
         }
 
         void PrepareDeviceSettings(object sender, PreparingDeviceSettingsEventArgs e)
@@ -492,7 +491,7 @@ namespace Metaballs
             b.Append($"Texture_MaxDistance: {preset.MaxDistance:0.##} <(y), >(x)\n");
             b.Append($"Texture_ScalingFactor: {preset.ScalingFactor:0.##} <(c), >(v)\n");
             b.Append($"Texture_Size: {preset.Size} <(b), >(n)\n");
-            
+
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
             spriteBatch.DrawString(font, b, new Vector2(10, 10), Color.White);
             spriteBatch.End();

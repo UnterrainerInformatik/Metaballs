@@ -33,22 +33,35 @@ namespace Metaballs.InputStateManager
     [PublicAPI]
     public class Keyboard
     {
-        public KeyboardState OldKeyboardState { get; set; }
-        public KeyboardState KeyboardState { get; set; }
+        public KeyboardState OldState { get; set; }
+        public KeyboardState State { get; set; }
 
-        public bool IsDown(Keys key) => KeyboardState.IsKeyDown(key);
-        public bool IsUp(Keys key) => KeyboardState.IsKeyUp(key);
-        public bool IsPress(Keys key) => KeyboardState.IsKeyDown(key) && OldKeyboardState.IsKeyUp(key);
-        public bool IsRelease(Keys key) => OldKeyboardState.IsKeyDown(key) && KeyboardState.IsKeyUp(key);
+        public bool IsDown(Keys key) => State.IsKeyDown(key);
+        public bool IsUp(Keys key) => State.IsKeyUp(key);
+        public bool IsPress(Keys key) => State.IsKeyDown(key) && OldState.IsKeyUp(key);
+        public bool IsRelease(Keys key) => OldState.IsKeyDown(key) && State.IsKeyUp(key);
 
         public bool IsShiftDown => IsDown(Keys.LeftShift) || IsDown(Keys.RightShift);
         public bool IsCtrlDown => IsDown(Keys.LeftControl) || IsDown(Keys.RightControl);
         public bool IsAltDown => IsDown(Keys.LeftAlt) || IsDown(Keys.RightAlt);
+        public bool IsNumLock => State.NumLock;
+        public bool IsCapsLock => State.CapsLock;
+        public Keys[] GetPressedKeys => State.GetPressedKeys();
 
-        public void Update()
+        public bool IsOldDown(Keys key) => OldState.IsKeyDown(key);
+        public bool IsOldUp(Keys key) => OldState.IsKeyUp(key);
+
+        public bool IsOldShiftDown => IsOldDown(Keys.LeftShift) || IsOldDown(Keys.RightShift);
+        public bool IsOldCtrlDown => IsOldDown(Keys.LeftControl) || IsOldDown(Keys.RightControl);
+        public bool IsOldAltDown => IsOldDown(Keys.LeftAlt) || IsOldDown(Keys.RightAlt);
+        public bool IsOldNumLock => OldState.NumLock;
+        public bool IsOldCapsLock => OldState.CapsLock;
+        public Keys[] GetOldPressedKeys => OldState.GetPressedKeys();
+
+        internal void Update()
         {
-            OldKeyboardState = KeyboardState;
-            KeyboardState = Microsoft.Xna.Framework.Input.Keyboard.GetState();
+            OldState = State;
+            State = Microsoft.Xna.Framework.Input.Keyboard.GetState();
         }
     }
 }
