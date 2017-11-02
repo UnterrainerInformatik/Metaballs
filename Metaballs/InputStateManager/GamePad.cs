@@ -59,6 +59,7 @@ namespace Metaballs.InputStateManager
         public int PacketNumber(PlayerIndex p = PlayerIndex.One) => State(p).PacketNumber;
         public GamePadThumbSticks ThumbSticks(PlayerIndex p = PlayerIndex.One) => State(p).ThumbSticks;
         public GamePadTriggers Triggers(PlayerIndex p = PlayerIndex.One) => State(p).Triggers;
+        public bool Connected(PlayerIndex p = PlayerIndex.One) => !OldState(p).IsConnected && State(p).IsConnected;
 
         // Old states.
         public bool IsOldConnected(PlayerIndex p = PlayerIndex.One) => OldState(p).IsConnected;

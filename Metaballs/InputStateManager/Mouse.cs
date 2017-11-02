@@ -61,6 +61,9 @@ namespace Metaballs.InputStateManager
         public int HorizontalScrollWheelValue => State.HorizontalScrollWheelValue;
         public int X => State.X;
         public int Y => State.Y;
+        public int WheelDelta => State.ScrollWheelValue - OldState.ScrollWheelValue;
+        public int XDelta => State.X - OldState.X;
+        public int YDelta => State.Y - OldState.Y;
 
         public bool IsOldUp(Button button) => IsUp(OldState, button);
         public bool IsOldDown(Button button) => IsDown(OldState, button);

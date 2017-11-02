@@ -28,7 +28,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Metaballs.InputStateManager;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -155,7 +154,7 @@ namespace Metaballs
             // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            font = Content.Load<SpriteFont>("Arsenal");
+            font = Content.Load<SpriteFont>("AnonymousPro8");
 
             alphaTest = new AlphaTestEffect(GraphicsDevice);
             var viewport = GraphicsDevice.Viewport;
@@ -260,7 +259,7 @@ namespace Metaballs
             spriteBatch.Draw(metaballTarget, Vector2.Zero, Color.White);
             spriteBatch.End();
 
-            DrawText();
+            DrawText(gameTime);
             DrawShapes();
             base.Draw(gameTime);
         }
@@ -478,7 +477,7 @@ namespace Metaballs
                 fixedMouseJoint.WorldAnchorB = p;
         }
 
-        private void DrawText()
+        private void DrawText(GameTime gameTime)
         {
             StringBuilder b = new StringBuilder();
             b.Append("Reset Scene: Lava(r), Water(t)\n");
@@ -492,8 +491,9 @@ namespace Metaballs
             b.Append($"Texture_ScalingFactor: {preset.ScalingFactor:0.##} <(c), >(v)\n");
             b.Append($"Texture_Size: {preset.Size} <(b), >(n)\n");
 
+            var t = .5f + .5f * (float) Math.Sin(10 * gameTime.TotalGameTime.TotalSeconds);
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
-            spriteBatch.DrawString(font, b, new Vector2(10, 10), Color.White);
+            spriteBatch.DrawString(font, b, new Vector2(10, 10), Color.Lerp(Color.White, Color.Gray, t));
             spriteBatch.End();
         }
     }
