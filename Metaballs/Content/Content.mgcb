@@ -20,10 +20,3 @@
 /processorParam:TextureFormat=Compressed
 /build:AnonymousPro8.spritefont
 
-#begin Arsenal.spritefont
-/importer:FontDescriptionImporter
-/processor:FontDescriptionProcessor
-/processorParam:PremultiplyAlpha=True
-/processorParam:TextureFormat=Compressed
-/build:Arsenal.spritefont
-

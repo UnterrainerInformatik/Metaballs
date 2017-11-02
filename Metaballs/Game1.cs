@@ -28,6 +28,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Inputs;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -36,7 +37,7 @@ using tainicom.Aether.Physics2D.Controllers;
 using tainicom.Aether.Physics2D.Dynamics;
 using tainicom.Aether.Physics2D.Dynamics.Joints;
 using Utilities;
-using Mouse = Metaballs.InputStateManager.Mouse;
+using Mouse = Inputs.Mouse;
 
 namespace Metaballs
 {
@@ -67,7 +68,7 @@ namespace Metaballs
         private ParticleHydrodynamicsController controller;
         private FixedMouseJoint fixedMouseJoint;
 
-        private readonly InputStateManager.InputStateManager input;
+        private readonly InputStateManager input = new InputStateManager();
 
         public Game1()
         {
@@ -94,7 +95,6 @@ namespace Metaballs
             world.CreateCircle(30, 0.0005f, new Vector2(500f, 500f), BodyType.Dynamic);
 
             world.JointRemoved += JointRemoved;
-            input = new InputStateManager.InputStateManager();
         }
 
         void PrepareDeviceSettings(object sender, PreparingDeviceSettingsEventArgs e)
@@ -336,11 +336,11 @@ namespace Metaballs
         private void HandleInput()
         {
             input.Update();
-            if (input.GamePad.IsPress(Buttons.Back) || input.Keyboard.IsPress(Keys.Escape))
+            if (input.Pad.Is.Press(Buttons.Back) || input.Key.Is.Press(Keys.Escape))
                 Exit();
-            if (input.Keyboard.IsPress(Keys.R)) Reset(Preset.Lava());
-            if (input.Keyboard.IsPress(Keys.T)) Reset(Preset.Water());
-            if (input.Keyboard.IsPress(Keys.G))
+            if (input.Key.Is.Press(Keys.R)) Reset(Preset.Lava());
+            if (input.Key.Is.Press(Keys.T)) Reset(Preset.Water());
+            if (input.Key.Is.Press(Keys.G))
             {
                 isGravity = !isGravity;
                 if (isGravity)
@@ -383,12 +383,12 @@ namespace Metaballs
             bool repeat = false)
         {
             float v = 0;
-            if (!repeat && input.Keyboard.IsPress(up) || repeat && input.Keyboard.IsDown(up))
+            if (!repeat && input.Key.Is.Press(up) || repeat && input.Key.Is.Down(up))
             {
                 v = step;
                 isModified = true;
             }
-            if (!repeat && input.Keyboard.IsPress(down) || repeat && input.Keyboard.IsDown(down))
+            if (!repeat && input.Key.Is.Press(down) || repeat && input.Key.Is.Down(down))
             {
                 v = -step;
                 isModified = true;
@@ -399,12 +399,12 @@ namespace Metaballs
         private int HandleIntInput(Keys down, Keys up, int step, int value, ref bool isModified, bool repeat = false)
         {
             int v = 0;
-            if (!repeat && input.Keyboard.IsPress(up) || repeat && input.Keyboard.IsDown(up))
+            if (!repeat && input.Key.Is.Press(up) || repeat && input.Key.Is.Down(up))
             {
                 v = step;
                 isModified = true;
             }
-            if (!repeat && input.Keyboard.IsPress(down) || repeat && input.Keyboard.IsDown(down))
+            if (!repeat && input.Key.Is.Press(down) || repeat && input.Key.Is.Down(down))
             {
                 v = -step;
                 isModified = true;
@@ -415,18 +415,18 @@ namespace Metaballs
         private Color HandleColorInput(Keys keyR, Keys keyG, Keys keyB, Color c, ref bool isModified)
         {
             Color color = c;
-            int v = input.Keyboard.IsCtrlDown ? 1 : -1;
-            if (input.Keyboard.IsDown(keyR))
+            int v = input.Key.Is.CtrlDown ? 1 : -1;
+            if (input.Key.Is.Down(keyR))
             {
                 color = new Color((color.R + v).Clamp(0, 255), color.G, color.B, color.A);
                 isModified = true;
             }
-            if (input.Keyboard.IsDown(keyG))
+            if (input.Key.Is.Down(keyG))
             {
                 color = new Color(color.R, (color.G + v).Clamp(0, 255), color.B, color.A);
                 isModified = true;
             }
-            if (input.Keyboard.IsDown(keyB))
+            if (input.Key.Is.Down(keyB))
             {
                 color = new Color(color.R, color.G, (color.B + v).Clamp(0, 255), color.A);
                 isModified = true;
@@ -436,10 +436,10 @@ namespace Metaballs
 
         private void HandleMouseInput()
         {
-            var position = input.Mouse.Position.ToVector2();
-            if (input.Mouse.IsRelease(Mouse.Button.LEFT))
+            var position = input.Mouse.Is.Position.ToVector2();
+            if (input.Mouse.Is.Release(Mouse.Button.LEFT))
                 MouseUp();
-            else if (input.Mouse.IsPress(Mouse.Button.LEFT))
+            else if (input.Mouse.Is.Press(Mouse.Button.LEFT))
                 MouseDown(position);
 
             MouseMove(position);
