@@ -28,8 +28,9 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Inputs;
+using InputStateManager;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using tainicom.Aether.Physics2D.Collision.Shapes;
@@ -37,7 +38,7 @@ using tainicom.Aether.Physics2D.Controllers;
 using tainicom.Aether.Physics2D.Dynamics;
 using tainicom.Aether.Physics2D.Dynamics.Joints;
 using Utilities;
-using Mouse = Inputs.Mouse;
+using Mouse = InputStateManager.Inputs.Mouse;
 
 namespace Metaballs
 {
@@ -68,7 +69,7 @@ namespace Metaballs
         private ParticleHydrodynamicsController controller;
         private FixedMouseJoint fixedMouseJoint;
 
-        private readonly InputStateManager input = new InputStateManager();
+        private readonly InputManager input = new InputManager();
 
         public Game1()
         {
