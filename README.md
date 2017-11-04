@@ -24,6 +24,14 @@ It's available via NuGet [here](https://www.nuget.org/packages/Aether.Physics2D)
 
 I also use the algorithm explained in [2D Metaballs in XNA](http://nullcandy.com/2d-metaballs-in-xna/) posted by [Hoffman](http://nullcandy.com/author/hoffman/) on [NullCandy](http://nullcandy.com/) back in 2012.
 
+## Usage
+
+You can modify the parameters while you're watching the result.
+Just follow the on-screen documentation to get the shortcuts.
+
+The short GIF here shows the two presets while I'm modifying some parameters.
+The GIF somewhat lacks quality. The colors are perfect on-screen.
+
 ![example video][example]
 
 [homepage]: http://www.unterrainer.info
