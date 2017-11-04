@@ -93,7 +93,7 @@ namespace Metaballs
             world.CreateEdge(new Vector2(0f, h), new Vector2(w, h));
             world.CreateEdge(new Vector2(w, h), new Vector2(w, 0f));
             world.CreateEdge(new Vector2(w, 0f), new Vector2(0f, 0f));
-            world.CreateCircle(30, 0.0005f, new Vector2(500f, 500f), BodyType.Dynamic);
+            //world.CreateCircle(30, 0.0005f, new Vector2(500f, 500f), BodyType.Dynamic);
 
             world.JointRemoved += JointRemoved;
         }

@@ -12,13 +12,21 @@ If you want to contribute to our repository (push, open pull requests), please u
 
 # Metaballs
 
+---
+
+**Work in Progress**
+While I'm done with the Hoffman algorithm, I'm still working on enabling the Physics2D library.
+
+---
+
 This demo uses the excellent [Aether.Physics2D](https://github.com/tainicom/Aether.Physics2D) library from [nkast](https://github.com/nkast) you may know from the MonoGame community.
 It's available via NuGet [here](https://www.nuget.org/packages/Aether.Physics2D).
 
 I also use the algorithm explained in [2D Metaballs in XNA](http://nullcandy.com/2d-metaballs-in-xna/) posted by [Hoffman](http://nullcandy.com/author/hoffman/) on [NullCandy](http://nullcandy.com/) back in 2012.
 
-
+![example video][example]
 
 [homepage]: http://www.unterrainer.info
 [coding]: http://www.unterrainer.info/Home/Coding
 [github]: https://github.com/UnterrainerInformatik/Metaballs
+[example]: https://github.com/UnterrainerInformatik/Metaballs/blob/master/example.gif
