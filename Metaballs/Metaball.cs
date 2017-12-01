@@ -28,9 +28,6 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using tainicom.Aether.Physics2D.Controllers;
-using tainicom.Aether.Physics2D.Dynamics;
-using tainicom.Aether.Physics2D.Fluids;
 
 namespace Metaballs
 {
@@ -40,7 +37,7 @@ namespace Metaballs
         public Vector2 Origin => new Vector2(Texture.Width, Texture.Height) / 2f;
         public Vector2 Trajectory { get; set; }
         public float Velocity { get; set; }
-        public Particle Particle { get; set; }
+        public int ParticleIndex { get; set; }
 
         public Texture2D Texture { get; set; }
         
@@ -51,8 +48,6 @@ namespace Metaballs
             Trajectory.Normalize();
             Position = new Vector2(rand.Next(0, 700), rand.Next(0, 700));
             Velocity = rand.Next(100, 4000) / 1000f;
-
-            Particle = new Particle(Position.X, Position.Y);
         }
 
         public void Remove()
@@ -60,42 +55,34 @@ namespace Metaballs
             //World.Fluid.Particles.Remove(Particle);
         }
 
-        private void ConstrainAndReflect(Point bounds)
+        private void ConstrainAndReflect(Viewport bounds)
         {
-            if (Position.X <= 0)
-            {
-                Position = new Vector2(0, Position.Y);
-                Trajectory = new Vector2(-Trajectory.X, Trajectory.Y);
-            }
-            if (Position.X >= bounds.X)
+            if (Position.X <= bounds.X)
             {
                 Position = new Vector2(bounds.X, Position.Y);
                 Trajectory = new Vector2(-Trajectory.X, Trajectory.Y);
             }
-            if (Position.Y <= 0)
+            if (Position.X >= bounds.X+ bounds.Width)
             {
-                Position = new Vector2(Position.X, 0);
-                Trajectory = new Vector2(Trajectory.X, -Trajectory.Y);
+                Position = new Vector2(bounds.X + bounds.Width, Position.Y);
+                Trajectory = new Vector2(-Trajectory.X, Trajectory.Y);
             }
-            if (Position.Y >= bounds.Y)
+            if (Position.Y <= bounds.Y)
             {
                 Position = new Vector2(Position.X, bounds.Y);
                 Trajectory = new Vector2(Trajectory.X, -Trajectory.Y);
             }
+            if (Position.Y >= bounds.Y + bounds.Height)
+            {
+                Position = new Vector2(Position.X, bounds.Y + bounds.Height);
+                Trajectory = new Vector2(Trajectory.X, -Trajectory.Y);
+            }
         }
 
-        public void Update(GameTime gameTime, Point bounds, bool isGravity)
+        public void Update(GameTime gameTime, Viewport bounds)
         {
-            if (isGravity)
-            {
-                Position = Particle.Position;
-            }
-            else
-            {
-                Position = Position + Trajectory * Velocity;
-                Particle.Position = Position;
-                ConstrainAndReflect(bounds);
-            }
+            Position = Position + Trajectory * Velocity;
+            ConstrainAndReflect(bounds);
         }
     }
 }

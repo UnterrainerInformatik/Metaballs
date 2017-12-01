@@ -30,13 +30,14 @@ using System.Collections.Generic;
 using System.Text;
 using InputStateManager;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using tainicom.Aether.Physics2D.Collision.Shapes;
+using tainicom.Aether.Physics2D.Common;
 using tainicom.Aether.Physics2D.Controllers;
 using tainicom.Aether.Physics2D.Dynamics;
 using tainicom.Aether.Physics2D.Dynamics.Joints;
+using tainicom.Aether.Physics2D.Maths;
 using Utilities;
 using Mouse = InputStateManager.Inputs.Mouse;
 
@@ -49,7 +50,13 @@ namespace Metaballs
     {
         public const int MIN_SCREEN_RESOLUTION_WIDTH = 1024;
         public const int MIN_SCREEN_RESOLUTION_HEIGHT = 768;
-        public readonly Point Bounds = new Point(MIN_SCREEN_RESOLUTION_WIDTH, MIN_SCREEN_RESOLUTION_HEIGHT);
+
+        public const int ZX = 10;
+        public const int ZY = 10;
+        public const int W = MIN_SCREEN_RESOLUTION_WIDTH - 10;
+        public const int H = MIN_SCREEN_RESOLUTION_HEIGHT - 10;
+
+        public readonly Viewport Bounds = new Viewport(ZX, ZY, W, H);
 
         private SpriteBatch spriteBatch;
         private SpriteFont font;
@@ -65,7 +72,6 @@ namespace Metaballs
         private int numberOfMetaballs = 120;
 
         private readonly World world;
-
         private ParticleHydrodynamicsController controller;
         private FixedMouseJoint fixedMouseJoint;
 
@@ -86,14 +92,13 @@ namespace Metaballs
 
             Content.RootDirectory = "Content";
 
-            world = new World(new Vector2(0f, 9.80665f));
-            var w = graphics.PreferredBackBufferWidth;
-            var h = graphics.PreferredBackBufferHeight;
-            world.CreateEdge(new Vector2(0f, 0f), new Vector2(0f, h));
-            world.CreateEdge(new Vector2(0f, h), new Vector2(w, h));
-            world.CreateEdge(new Vector2(w, h), new Vector2(w, 0f));
-            world.CreateEdge(new Vector2(w, 0f), new Vector2(0f, 0f));
-            //world.CreateCircle(30, 0.0005f, new Vector2(500f, 500f), BodyType.Dynamic);
+            world = new World();
+            world.Gravity = new Vector2(0f, 9.80665f);
+            world.CreateEdge(new Vector2(ZX, ZY), new Vector2(ZX, H));
+            world.CreateEdge(new Vector2(ZX, H), new Vector2(W, H));
+            world.CreateEdge(new Vector2(W, H), new Vector2(W, ZY));
+            world.CreateEdge(new Vector2(W, ZY), new Vector2(ZX, ZY));
+            //world.CreateCircle(40, 0.0005f, new Vector2(500f, 500f), BodyType.Dynamic);
 
             world.JointRemoved += JointRemoved;
         }
@@ -139,7 +144,7 @@ namespace Metaballs
             Metaball m = new Metaball
             {
                 Position =
-                    new Vector2(rand.Next(GraphicsDevice.Viewport.Width), rand.Next(GraphicsDevice.Viewport.Height)),
+                    new Vector2(rand.Next(W + ZX), rand.Next(H + ZY)) - new Vector2(ZX, ZY),
                 Texture = metaballTexture
             };
             m.Initialize(rand.Next());
@@ -238,7 +243,12 @@ namespace Metaballs
 
             foreach (var metaball in metaballs)
             {
-                metaball.Update(gameTime, Bounds, isGravity);
+                if (isGravity)
+                {
+                    metaball.Position = controller.GetParticlePosition(metaball.ParticleIndex);
+                }
+                else
+                    metaball.Update(gameTime, Bounds);
             }
 
             base.Update(gameTime);
@@ -281,10 +291,21 @@ namespace Metaballs
                     {
                         CircleShape circle = (CircleShape) fixture.Shape;
                         spriteBatch.DrawCircle(circle.Position, circle.Radius, 30, Color.AntiqueWhite, 2f, 1f);
+                        Transform t;
+                        body.GetTransform(out t);
+                        spriteBatch.DrawLine(circle.Position,
+                            circle.Position + ComplexMultiply(new Vector2(1f, 0), ref t.q) * circle.Radius,
+                            Color.AliceBlue, 2f, 1f);
                     }
                 }
             }
             spriteBatch.End();
+        }
+
+        public static Vector2 ComplexMultiply(Vector2 left, ref Complex right)
+        {
+            return new Vector2(left.X * right.Real - left.Y * right.Imaginary,
+                left.Y * right.Real + left.X * right.Imaginary);
         }
 
         private void DrawMetaballs(RenderTarget2D target)
@@ -349,9 +370,12 @@ namespace Metaballs
                     world.Remove(controller);
                     controller = new ParticleHydrodynamics2Controller(2.0f, 2048);
                     world.Add(controller);
+                    int i = 0;
                     foreach (var metaball in metaballs)
                     {
                         controller.AddParticle(metaball.Position, metaball.Trajectory * metaball.Velocity);
+                        metaball.ParticleIndex = i;
+                        i++;
                     }
                 }
             }
