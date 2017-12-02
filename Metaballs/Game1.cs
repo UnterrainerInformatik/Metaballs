@@ -51,10 +51,10 @@ namespace Metaballs
         public const int MIN_SCREEN_RESOLUTION_WIDTH = 1024;
         public const int MIN_SCREEN_RESOLUTION_HEIGHT = 768;
 
-        public const int ZX = 10;
-        public const int ZY = 10;
-        public const int W = MIN_SCREEN_RESOLUTION_WIDTH - 10;
-        public const int H = MIN_SCREEN_RESOLUTION_HEIGHT - 10;
+        public const int ZX = 6;
+        public const int ZY = 6;
+        public const int W = MIN_SCREEN_RESOLUTION_WIDTH - 6;
+        public const int H = MIN_SCREEN_RESOLUTION_HEIGHT - 6;
 
         public readonly Viewport Bounds = new Viewport(ZX, ZY, W, H);
 
@@ -94,11 +94,11 @@ namespace Metaballs
 
             world = new World();
             world.Gravity = new Vector2(0f, 9.80665f);
-            world.CreateEdge(new Vector2(ZX, ZY), new Vector2(ZX, H));
-            world.CreateEdge(new Vector2(ZX, H), new Vector2(W, H));
-            world.CreateEdge(new Vector2(W, H), new Vector2(W, ZY));
-            world.CreateEdge(new Vector2(W, ZY), new Vector2(ZX, ZY));
-            //world.CreateCircle(40, 0.0005f, new Vector2(500f, 500f), BodyType.Dynamic);
+            world.CreateEdge(new Vector2(ZX, H), new Vector2(ZX, ZY));
+            world.CreateEdge(new Vector2(W, H), new Vector2(ZX, H));
+            world.CreateEdge(new Vector2(W, ZY), new Vector2(W, H));
+            world.CreateEdge(new Vector2(ZX, ZY), new Vector2(W, ZY));
+            world.CreateCircle(40, 0.0005f, new Vector2(500f, 500f), BodyType.Dynamic);
 
             world.JointRemoved += JointRemoved;
         }
@@ -285,17 +285,17 @@ namespace Metaballs
                     if (fixture.Shape.ShapeType == ShapeType.Edge)
                     {
                         EdgeShape edge = (EdgeShape) fixture.Shape;
-                        spriteBatch.DrawLine(edge.Vertex1, edge.Vertex2, Color.White, 1f, 1f);
+                        spriteBatch.DrawLine(edge.Vertex1, edge.Vertex2, Color.Gray, 2f, 1f);
                     }
                     if (fixture.Shape.ShapeType == ShapeType.Circle)
                     {
                         CircleShape circle = (CircleShape) fixture.Shape;
-                        spriteBatch.DrawCircle(circle.Position, circle.Radius, 30, Color.AntiqueWhite, 2f, 1f);
+                        Vector2 p = body.GetWorldPoint(circle.Position);
+                        spriteBatch.DrawCircle(p, circle.Radius, 30, Color.DarkSlateBlue, 2f, 1f);
                         Transform t;
                         body.GetTransform(out t);
-                        spriteBatch.DrawLine(circle.Position,
-                            circle.Position + ComplexMultiply(new Vector2(1f, 0), ref t.q) * circle.Radius,
-                            Color.AliceBlue, 2f, 1f);
+                        spriteBatch.DrawLine(p, p + ComplexMultiply(new Vector2(1f, 0), ref t.q) * circle.Radius,
+                            Color.DarkSlateBlue, 2f, 1f);
                     }
                 }
             }
