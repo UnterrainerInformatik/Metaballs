@@ -31,40 +31,19 @@ using Microsoft.Xna.Framework;
 namespace Metaballs
 {
     [PublicAPI]
-    public class Preset
+    public class Bounds
     {
-        public Color Glow { get; set; }
-        public Color GradientInner { get; set; }
-        public Color GradientOuter { get; set; }
-        public float GlowFactor { get; set; }
-        public float MaxDistance { get; set; }
-        public float ScalingFactor { get; set; }
-        public int Size { get; set; }
+        public Vector2 TopLeft { get; }
+        public Vector2 WidthHeight { get; }
+        public float X => TopLeft.X;
+        public float Y => TopLeft.Y;
+        public float Width => WidthHeight.X;
+        public float Height => WidthHeight.Y;
 
-        public static Preset Lava()
-            =>
-                new Preset
-                {
-                    Glow = Color.DarkRed,
-                    GradientInner = Color.Yellow,
-                    GradientOuter = Color.DarkRed,
-                    GlowFactor = .8f,
-                    MaxDistance = 0.6f,
-                    ScalingFactor = 0.8f,
-                    Size = 120
-                };
-
-        public static Preset Water()
-            =>
-                new Preset
-                {
-                    Glow = Color.MidnightBlue,
-                    GradientInner = Color.DodgerBlue,
-                    GradientOuter = Color.MidnightBlue,
-                    GlowFactor = .3f,
-                    MaxDistance = 1f,
-                    ScalingFactor = 1f,
-                    Size = 100
-                };
+        public Bounds(Vector2 topLeft, Vector2 widthHeight)
+        {
+            TopLeft = topLeft;
+            WidthHeight = widthHeight;
+        }
     }
 }

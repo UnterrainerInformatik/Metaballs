@@ -37,6 +37,7 @@ using tainicom.Aether.Physics2D.Common;
 using tainicom.Aether.Physics2D.Controllers;
 using tainicom.Aether.Physics2D.Dynamics;
 using tainicom.Aether.Physics2D.Dynamics.Joints;
+using tainicom.Aether.Physics2D.Fluids;
 using tainicom.Aether.Physics2D.Maths;
 using Utilities;
 using Mouse = InputStateManager.Inputs.Mouse;
@@ -56,7 +57,7 @@ namespace Metaballs
         public const int W = MIN_SCREEN_RESOLUTION_WIDTH - 6;
         public const int H = MIN_SCREEN_RESOLUTION_HEIGHT - 6;
 
-        public readonly Viewport Bounds = new Viewport(ZX, ZY, W, H);
+        public readonly Bounds Bounds;
 
         private SpriteBatch spriteBatch;
         private SpriteFont font;
@@ -68,6 +69,7 @@ namespace Metaballs
         private readonly Random rand = new Random();
 
         private bool isGravity;
+        private bool isDebugDraw;
         private Preset preset;
         private int numberOfMetaballs = 120;
 
@@ -76,13 +78,16 @@ namespace Metaballs
         private FixedMouseJoint fixedMouseJoint;
 
         private readonly InputManager input = new InputManager();
+        private readonly Matrices m;
 
         public Game1()
         {
+            m = new Matrices(new Vector2(MIN_SCREEN_RESOLUTION_WIDTH, MIN_SCREEN_RESOLUTION_HEIGHT));
+            Bounds = new Bounds(m.TransformViewToWorld(ZX, ZY), m.TransformViewToWorld(W, H));
             var graphics = new GraphicsDeviceManager(this);
             graphics.PreferMultiSampling = true;
-            graphics.PreferredBackBufferWidth = MIN_SCREEN_RESOLUTION_WIDTH;
-            graphics.PreferredBackBufferHeight = MIN_SCREEN_RESOLUTION_HEIGHT;
+            graphics.PreferredBackBufferWidth = m.ViewInt.X;
+            graphics.PreferredBackBufferHeight = m.ViewInt.Y;
             graphics.IsFullScreen = false;
             graphics.PreparingDeviceSettings += PrepareDeviceSettings;
             graphics.SynchronizeWithVerticalRetrace = true;
@@ -93,12 +98,13 @@ namespace Metaballs
             Content.RootDirectory = "Content";
 
             world = new World();
+            world.Fluid = new FluidSystem2(new Vector2(0, -9.80665f), 5000, m.WorldInt.X, m.WorldInt.Y);
             world.Gravity = new Vector2(0f, 9.80665f);
-            world.CreateEdge(new Vector2(ZX, H), new Vector2(ZX, ZY));
-            world.CreateEdge(new Vector2(W, H), new Vector2(ZX, H));
-            world.CreateEdge(new Vector2(W, ZY), new Vector2(W, H));
-            world.CreateEdge(new Vector2(ZX, ZY), new Vector2(W, ZY));
-            world.CreateCircle(40, 0.0005f, new Vector2(500f, 500f), BodyType.Dynamic);
+            world.CreateEdge(m.TransformViewToWorld(ZX, H), m.TransformViewToWorld(ZX, ZY));
+            world.CreateEdge(m.TransformViewToWorld(W, H), m.TransformViewToWorld(ZX, H));
+            world.CreateEdge(m.TransformViewToWorld(W, ZY), m.TransformViewToWorld(W, H));
+            world.CreateEdge(m.TransformViewToWorld(ZX, ZY), m.TransformViewToWorld(W, ZY));
+            world.CreateCircle(m.TransformViewToWorld(40), 0.0005f, m.TransformViewToWorld(500f, 500f), BodyType.Dynamic);
 
             world.JointRemoved += JointRemoved;
         }
@@ -141,14 +147,13 @@ namespace Metaballs
 
         private Metaball CreateMetaball()
         {
-            Metaball m = new Metaball
+            Metaball b = new Metaball
             {
-                Position =
-                    new Vector2(rand.Next(W + ZX), rand.Next(H + ZY)) - new Vector2(ZX, ZY),
+                Position = m.TransformViewToWorld(rand.Next(W + ZX), rand.Next(H + ZY)) - new Vector2(ZX, ZY),
                 Texture = metaballTexture
             };
-            m.Initialize(rand.Next());
-            return m;
+            b.Initialize(rand.Next(), Bounds, m);
+            return b;
         }
 
         /// <summary>
@@ -260,7 +265,7 @@ namespace Metaballs
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            DrawMetaballs(metaballTarget);
+            DrawMetaballs(metaballTarget, gameTime);
 
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(Color.Black);
@@ -285,16 +290,18 @@ namespace Metaballs
                     if (fixture.Shape.ShapeType == ShapeType.Edge)
                     {
                         EdgeShape edge = (EdgeShape) fixture.Shape;
-                        spriteBatch.DrawLine(edge.Vertex1, edge.Vertex2, Color.Gray, 2f, 1f);
+                        spriteBatch.DrawLine(m.TransformWorldToView(edge.Vertex1), m.TransformWorldToView(edge.Vertex2),
+                            Color.Gray, 2f, 1f);
                     }
                     if (fixture.Shape.ShapeType == ShapeType.Circle)
                     {
                         CircleShape circle = (CircleShape) fixture.Shape;
-                        Vector2 p = body.GetWorldPoint(circle.Position);
-                        spriteBatch.DrawCircle(p, circle.Radius, 30, Color.DarkSlateBlue, 2f, 1f);
+                        Vector2 p = m.TransformWorldToView(body.GetWorldPoint(circle.Position));
+                        spriteBatch.DrawCircle(p, m.TransformWorldToView(circle.Radius), 30, Color.DarkSlateBlue, 2f, 1f);
                         Transform t;
                         body.GetTransform(out t);
-                        spriteBatch.DrawLine(p, p + ComplexMultiply(new Vector2(1f, 0), ref t.q) * circle.Radius,
+                        spriteBatch.DrawLine(p,
+                            p + m.TransformWorldToView(ComplexMultiply(new Vector2(1f, 0), ref t.q) * circle.Radius),
                             Color.DarkSlateBlue, 2f, 1f);
                     }
                 }
@@ -308,24 +315,26 @@ namespace Metaballs
                 left.Y * right.Real + left.X * right.Imaginary);
         }
 
-        private void DrawMetaballs(RenderTarget2D target)
+        private void DrawMetaballs(RenderTarget2D target, GameTime gameTime)
         {
             GraphicsDevice.SetRenderTarget(target);
             GraphicsDevice.Clear(Color.Transparent);
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive);
-            if (isGravity)
-            {
-                var origin = new Vector2(metaballTexture.Width, metaballTexture.Height) / 2f;
-                for (int i = 0; i < controller.ParticleCount; i++)
-                    spriteBatch.Draw(metaballTexture, controller.GetParticlePosition(i) - origin, Color.White);
-            }
-            else
-            {
-                foreach (var metaball in metaballs)
-                    spriteBatch.Draw(metaball.Texture, metaball.Position - metaball.Origin, Color.White);
-            }
+            foreach (var metaball in metaballs)
+                spriteBatch.Draw(metaball.Texture, m.TransformWorldToView(metaball.Position) - metaball.Origin,
+                    Color.White);
             spriteBatch.End();
+
+            if (isDebugDraw)
+            {
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+                var t = .5f + .5f * (float) Math.Sin(10 * gameTime.TotalGameTime.TotalSeconds);
+                foreach (var metaball in metaballs)
+                    spriteBatch.DrawCircle(m.TransformWorldToView(metaball.Position), 5f, 4,
+                        Color.Lerp(Color.Black, Color.Red, t), 1f, 1f);
+                spriteBatch.End();
+            }
         }
 
         /// <summary>
@@ -336,22 +345,11 @@ namespace Metaballs
         private void DrawMetaballsGlow(float weight)
         {
             Color tint = new Color(preset.Glow.ToVector3() * weight);
-            var origin = new Vector2(metaballTexture.Width, metaballTexture.Height) / 2f;
-
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive);
-            if (isGravity)
-            {
-                for (int i = 0; i < controller.ParticleCount; i++)
-                    spriteBatch.Draw(metaballTexture, controller.GetParticlePosition(i) - origin, tint);
-            }
-            else
-            {
-                foreach (var metaball in metaballs)
-                {
-                    spriteBatch.Draw(metaball.Texture, metaball.Position - metaball.Origin, null, tint, 0f, Vector2.Zero,
-                        1f, SpriteEffects.None, 0f);
-                }
-            }
+            foreach (var metaball in metaballs)
+                spriteBatch.Draw(metaball.Texture, m.TransformWorldToView(metaball.Position) - metaball.Origin, null,
+                    tint, 0f, Vector2.Zero,
+                    1f, SpriteEffects.None, 0f);
             spriteBatch.End();
         }
 
@@ -379,10 +377,11 @@ namespace Metaballs
                     }
                 }
             }
+            if (input.Key.Is.Press(Keys.H)) isDebugDraw = !isDebugDraw;
 
             bool valModified = false;
             preset.GlowFactor = HandleFloatInput(Keys.Q, Keys.W, .1f, preset.GlowFactor, ref valModified).Clamp(0f, 1f);
-            numberOfMetaballs = HandleIntInput(Keys.A, Keys.S, 1, numberOfMetaballs, ref valModified)
+            numberOfMetaballs = HandleIntInput(Keys.A, Keys.S, 1, numberOfMetaballs, ref valModified, true)
                 .Clamp(0, int.MaxValue);
 
             bool textureModified = false;
@@ -395,7 +394,7 @@ namespace Metaballs
                 HandleFloatInput(Keys.Y, Keys.X, .01f, preset.MaxDistance, ref textureModified, true).Clamp(0f, 1f);
             preset.ScalingFactor =
                 HandleFloatInput(Keys.C, Keys.V, .01f, preset.ScalingFactor, ref textureModified, true).Clamp(0f, 1f);
-            preset.Size = HandleIntInput(Keys.B, Keys.N, 1, preset.Size, ref textureModified, true)
+            preset.Size = HandleIntInput(Keys.B, Keys.N, 10, preset.Size, ref textureModified, true)
                 .Clamp(0, int.MaxValue);
             if (textureModified)
             {
@@ -475,12 +474,12 @@ namespace Metaballs
             if (fixedMouseJoint != null)
                 return;
 
-            Fixture fixture = world.TestPoint(p);
+            Fixture fixture = world.TestPoint(m.TransformViewToWorld(p));
 
             if (fixture != null)
             {
                 Body body = fixture.Body;
-                fixedMouseJoint = new FixedMouseJoint(body, p);
+                fixedMouseJoint = new FixedMouseJoint(body, m.TransformViewToWorld(p));
                 fixedMouseJoint.MaxForce = 1000.0f * body.Mass;
                 world.Add(fixedMouseJoint);
                 body.Awake = true;
@@ -499,7 +498,7 @@ namespace Metaballs
         private void MouseMove(Vector2 p)
         {
             if (fixedMouseJoint != null)
-                fixedMouseJoint.WorldAnchorB = p;
+                fixedMouseJoint.WorldAnchorB = m.TransformViewToWorld(p);
         }
 
         private void DrawText(GameTime gameTime)
@@ -507,6 +506,7 @@ namespace Metaballs
             StringBuilder b = new StringBuilder();
             b.Append("Reset Scene: Lava(r), Water(t)\n");
             b.Append($"Gravity: {isGravity} (g)\n");
+            b.Append($"DebugDraw: {isDebugDraw} (h)\n");
             b.Append($"Number of Metaballs: {numberOfMetaballs} <(a), >(s)\n");
             b.Append($"GlowFactor: {preset.GlowFactor:0.##} <(q), >(w)\n");
             b.Append($"GlowColor: {preset.Glow} <(num789), >(ctrl)(num789)\n");
@@ -516,7 +516,7 @@ namespace Metaballs
             b.Append($"Texture_ScalingFactor: {preset.ScalingFactor:0.##} <(c), >(v)\n");
             b.Append($"Texture_Size: {preset.Size} <(b), >(n)\n");
 
-            var t = .5f + .5f * (float) Math.Sin(10 * gameTime.TotalGameTime.TotalSeconds);
+            var t = .5f + .5f * (float) Math.Sin(5 * gameTime.TotalGameTime.TotalSeconds);
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
             spriteBatch.DrawString(font, b, new Vector2(10, 10), Color.Lerp(Color.White, Color.Gray, t));
             spriteBatch.End();

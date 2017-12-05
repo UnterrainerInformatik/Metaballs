@@ -41,13 +41,15 @@ namespace Metaballs
 
         public Texture2D Texture { get; set; }
         
-        public void Initialize(int seed)
+        public void Initialize(int seed, Bounds bounds, Matrices m)
         {
             Random rand = new Random(seed);
             Trajectory = new Vector2(rand.Next(-1000, 1000) / 1000f, rand.Next(-1000, 1000) / 1000f);
             Trajectory.Normalize();
-            Position = new Vector2(rand.Next(0, 700), rand.Next(0, 700));
-            Velocity = rand.Next(100, 4000) / 1000f;
+            Position = new Vector2(rand.Next(0, 1000), rand.Next(0, 1000)) / 1000f;
+            Position = bounds.TopLeft + bounds.WidthHeight * Position;
+            Velocity = rand.Next(10, 400) / 100f;
+            Velocity = m.TransformViewToWorld(Velocity);
         }
 
         public void Remove()
@@ -55,7 +57,7 @@ namespace Metaballs
             //World.Fluid.Particles.Remove(Particle);
         }
 
-        private void ConstrainAndReflect(Viewport bounds)
+        private void ConstrainAndReflect(Bounds bounds)
         {
             if (Position.X <= bounds.X)
             {
@@ -79,7 +81,7 @@ namespace Metaballs
             }
         }
 
-        public void Update(GameTime gameTime, Viewport bounds)
+        public void Update(GameTime gameTime, Bounds bounds)
         {
             Position = Position + Trajectory * Velocity;
             ConstrainAndReflect(bounds);

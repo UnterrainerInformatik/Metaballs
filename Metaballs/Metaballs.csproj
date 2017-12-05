@@ -44,7 +44,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Bounds.cs" />
     <Compile Include="Game1.cs" />
+    <Compile Include="Matrices.cs" />
     <Compile Include="Metaball.cs" />
     <Compile Include="Preset.cs" />
     <Compile Include="Primitives\Primitives2D.cs" />

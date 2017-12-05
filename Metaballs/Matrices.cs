@@ -31,40 +31,61 @@ using Microsoft.Xna.Framework;
 namespace Metaballs
 {
     [PublicAPI]
-    public class Preset
+    public class Matrices
     {
-        public Color Glow { get; set; }
-        public Color GradientInner { get; set; }
-        public Color GradientOuter { get; set; }
-        public float GlowFactor { get; set; }
-        public float MaxDistance { get; set; }
-        public float ScalingFactor { get; set; }
-        public int Size { get; set; }
+        public Matrix ViewToWorld { get; } = Matrix.CreateScale(.01f);
+        public Matrix WorldToView { get; }
 
-        public static Preset Lava()
-            =>
-                new Preset
-                {
-                    Glow = Color.DarkRed,
-                    GradientInner = Color.Yellow,
-                    GradientOuter = Color.DarkRed,
-                    GlowFactor = .8f,
-                    MaxDistance = 0.6f,
-                    ScalingFactor = 0.8f,
-                    Size = 120
-                };
+        public Vector2 View;
+        public Point ViewInt => View.ToPoint();
+        public Vector2 World;
+        public Point WorldInt => World.ToPoint();
 
-        public static Preset Water()
-            =>
-                new Preset
-                {
-                    Glow = Color.MidnightBlue,
-                    GradientInner = Color.DodgerBlue,
-                    GradientOuter = Color.MidnightBlue,
-                    GlowFactor = .3f,
-                    MaxDistance = 1f,
-                    ScalingFactor = 1f,
-                    Size = 100
-                };
+        public Matrices(Vector2 view)
+        {
+            WorldToView = Matrix.Invert(ViewToWorld);
+            View = view;
+            World = Vector2.Transform(View, ViewToWorld);
+        }
+
+        public float TransformViewToWorld(float v)
+        {
+            return v * .01f;
+        }
+
+        public float TransformWorldToView(float v)
+        {
+            return v * 100f;
+        }
+
+        public Vector2 TransformViewToWorld(Vector2 v)
+        {
+            return Vector2.Transform(v, ViewToWorld);
+        }
+
+        public Vector2 TransformViewToWorld(float x, float y)
+        {
+            return TransformViewToWorld(new Vector2(x, y));
+        }
+
+        public Vector2 TransformViewToWorld(Point p)
+        {
+            return TransformViewToWorld(p.ToVector2());
+        }
+        
+        public Vector2 TransformWorldToView(Vector2 v)
+        {
+            return Vector2.Transform(v, WorldToView);
+        }
+
+        public Vector2 TransformWorldToView(float x, float y)
+        {
+            return TransformWorldToView(new Vector2(x, y));
+        }
+
+        public Vector2 TransformWorldToView(Point p)
+        {
+            return TransformWorldToView(p.ToVector2());
+        }
     }
 }
