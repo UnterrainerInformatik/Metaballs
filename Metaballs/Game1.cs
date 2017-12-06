@@ -98,7 +98,7 @@ namespace Metaballs
             Content.RootDirectory = "Content";
 
             world = new World();
-            world.Fluid = new FluidSystem2(new Vector2(0, -9.80665f), 5000, m.WorldInt.X, m.WorldInt.Y);
+            world.Fluid = new FluidSystem2(new Vector2(0, -9.80665f), 5000, m.WorldInt.X, m.WorldInt.Y, 5);
             world.Gravity = new Vector2(0f, 9.80665f);
             world.CreateEdge(m.TransformViewToWorld(ZX, H), m.TransformViewToWorld(ZX, ZY));
             world.CreateEdge(m.TransformViewToWorld(W, H), m.TransformViewToWorld(ZX, H));
@@ -216,9 +216,9 @@ namespace Metaballs
 
             while (numberOfMetaballs < metaballs.Count)
             {
-                var m = metaballs[metaballs.Count - 1];
-                metaballs.Remove(m);
-                m.Remove();
+                var b = metaballs[metaballs.Count - 1];
+                metaballs.Remove(b);
+                b.Remove();
             }
         }
 
@@ -238,6 +238,7 @@ namespace Metaballs
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
+            FluidSettings s = world.Fluid.settings;
             HandleInput();
             HandleMouseInput();
             if (isGravity)
@@ -396,6 +397,39 @@ namespace Metaballs
                 HandleFloatInput(Keys.C, Keys.V, .01f, preset.ScalingFactor, ref textureModified, true).Clamp(0f, 1f);
             preset.Size = HandleIntInput(Keys.B, Keys.N, 10, preset.Size, ref textureModified, true)
                 .Clamp(0, int.MaxValue);
+
+            bool physModified = false;
+            world.Fluid.settings.RestLength = HandleFloatInput(Keys.D1, .01f, world.Fluid.settings.RestLength,
+                ref physModified, true);
+            world.Fluid.settings.InfluenceRadius = HandleFloatInput(Keys.D2, .01f, world.Fluid.settings.InfluenceRadius,
+                ref physModified, true);
+            world.Fluid.settings.CollisionForce = HandleFloatInput(Keys.D4, .01f, world.Fluid.settings.CollisionForce,
+                ref physModified, true);
+            world.Fluid.settings.DeformationFactor = HandleFloatInput(Keys.D5, .01f, world.Fluid.settings.DeformationFactor,
+                ref physModified, true);
+            world.Fluid.settings.DensityRest = HandleFloatInput(Keys.D6, .01f, world.Fluid.settings.DensityRest,
+                ref physModified, true);
+            world.Fluid.settings.KSpring = HandleFloatInput(Keys.D7, .01f, world.Fluid.settings.KSpring,
+                ref physModified, true);
+            world.Fluid.settings.MaxNeighbors = HandleIntInput(Keys.D8, 1, world.Fluid.settings.MaxNeighbors,
+                ref physModified, true);
+            world.Fluid.settings.Plasticity = HandleFloatInput(Keys.D9, .01f, world.Fluid.settings.Plasticity,
+                ref physModified, true);
+            world.Fluid.settings.Stiffness = HandleFloatInput(Keys.D0, .01f, world.Fluid.settings.Stiffness,
+                ref physModified, true);
+            world.Fluid.settings.StiffnessFarNearRatio = HandleFloatInput(Keys.U, .01f, world.Fluid.settings.StiffnessFarNearRatio,
+                ref physModified, true);
+            world.Fluid.settings.VelocityCap = HandleIntInput(Keys.I, 1, world.Fluid.settings.VelocityCap,
+                ref physModified, true);
+            world.Fluid.settings.ViscosityBeta = HandleFloatInput(Keys.O, .01f, world.Fluid.settings.ViscosityBeta,
+                ref physModified, true);
+            world.Fluid.settings.ViscositySigma = HandleFloatInput(Keys.J, .01f, world.Fluid.settings.ViscositySigma,
+                ref physModified, true);
+            world.Fluid.settings.YieldRatioCompress = HandleFloatInput(Keys.K, .01f, world.Fluid.settings.YieldRatioCompress,
+                ref physModified, true);
+            world.Fluid.settings.YieldRatioStretch = HandleFloatInput(Keys.L, .01f, world.Fluid.settings.YieldRatioStretch,
+                ref physModified, true);
+
             if (textureModified)
             {
                 RecreateTexture();
@@ -420,6 +454,18 @@ namespace Metaballs
             return value + v;
         }
 
+        private float HandleFloatInput(Keys down, float step, float value, ref bool isModified, bool repeat = false)
+        {
+            float mult = input.Key.Is.CtrlDown ? -1 : 1;
+            float v = 0;
+            if (!repeat && input.Key.Is.Press(down) || repeat && input.Key.Is.Down(down))
+            {
+                v = -step * mult;
+                isModified = true;
+            }
+            return value + v;
+        }
+
         private int HandleIntInput(Keys down, Keys up, int step, int value, ref bool isModified, bool repeat = false)
         {
             int v = 0;
@@ -431,6 +477,18 @@ namespace Metaballs
             if (!repeat && input.Key.Is.Press(down) || repeat && input.Key.Is.Down(down))
             {
                 v = -step;
+                isModified = true;
+            }
+            return value + v;
+        }
+
+        private int HandleIntInput(Keys down, int step, int value, ref bool isModified, bool repeat = false)
+        {
+            int mult = input.Key.Is.CtrlDown ? -1 : 1;
+            int v = 0;
+            if (!repeat && input.Key.Is.Press(down) || repeat && input.Key.Is.Down(down))
+            {
+                v = -step * mult;
                 isModified = true;
             }
             return value + v;
@@ -503,22 +561,44 @@ namespace Metaballs
 
         private void DrawText(GameTime gameTime)
         {
-            StringBuilder b = new StringBuilder();
-            b.Append("Reset Scene: Lava(r), Water(t)\n");
-            b.Append($"Gravity: {isGravity} (g)\n");
-            b.Append($"DebugDraw: {isDebugDraw} (h)\n");
-            b.Append($"Number of Metaballs: {numberOfMetaballs} <(a), >(s)\n");
-            b.Append($"GlowFactor: {preset.GlowFactor:0.##} <(q), >(w)\n");
-            b.Append($"GlowColor: {preset.Glow} <(num789), >(ctrl)(num789)\n");
-            b.Append($"Texture_GradientInner: {preset.GradientInner} <(num456), >(ctrl)(num456)\n");
-            b.Append($"Texture_GradientOuter: {preset.GradientOuter} <(num123), >(ctrl)(num123)\n");
-            b.Append($"Texture_MaxDistance: {preset.MaxDistance:0.##} <(y), >(x)\n");
-            b.Append($"Texture_ScalingFactor: {preset.ScalingFactor:0.##} <(c), >(v)\n");
-            b.Append($"Texture_Size: {preset.Size} <(b), >(n)\n");
+            StringBuilder l = new StringBuilder();
+            l.Append(" G E N E R A L:\n");
+            l.Append("Reset Scene: Lava(r), Water(t)\n");
+            l.Append($"Gravity: {isGravity} (g)\n");
+            l.Append($"DebugDraw: {isDebugDraw} (h)\n");
+            l.Append($"Number of Metaballs: {numberOfMetaballs} <(a), >(s)\n");
+            l.Append($"GlowFactor: {preset.GlowFactor:0.##} <(q), >(w)\n");
+            l.Append($"GlowColor: {preset.Glow} <(num789), >(ctrl)(num789)\n");
+            l.Append($"Texture_GradientInner: {preset.GradientInner} <(num456), >(ctrl)(num456)\n");
+            l.Append($"Texture_GradientOuter: {preset.GradientOuter} <(num123), >(ctrl)(num123)\n");
+            l.Append($"Texture_MaxDistance: {preset.MaxDistance:0.##} <(y), >(x)\n");
+            l.Append($"Texture_ScalingFactor: {preset.ScalingFactor:0.##} <(c), >(v)\n");
+            l.Append($"Texture_Size: {preset.Size} <(b), >(n)\n");
+
+            FluidSettings s = world.Fluid.settings;
+            StringBuilder r = new StringBuilder();
+            r.Append("P H Y S I C S:\n");
+            r.Append($"RestLength: {s.RestLength:0.###} <(1), >(ctrl)(1)\n");
+            r.Append($"InfluenceRadius: {s.InfluenceRadius:0.###} <(2), >(ctrl)(2)\n");
+            r.Append($"CollisionForce: {s.CollisionForce:0.###} <(4), >(ctrl)(4)\n");
+            r.Append($"DeformationFactor: {s.DeformationFactor:0.###} <(5), >(ctrl)(5)\n");
+            r.Append($"DensityRest: {s.DensityRest:0.###} <(6), >(ctrl)(6)\n");
+            r.Append($"KSpring: {s.KSpring:0.###} <(7), >(ctrl)(7)\n");
+            r.Append($"MaxNeighbors: {s.MaxNeighbors} <(8), >(ctrl)(8)\n");
+            r.Append($"Plasticity: {s.Plasticity:0.###} <(9), >(ctrl)(9)\n");
+            r.Append($"Stiffness: {s.Stiffness:0.###} <(0), >(ctrl)(0)\n");
+            r.Append($"StiffnessFarNearRatio: {s.StiffnessFarNearRatio:0.###} <(u), >(ctrl)(u)\n");
+            r.Append($"VelocityCap: {s.VelocityCap} <(i), >(ctrl)(i)\n");
+            r.Append($"ViscosityBeta: {s.ViscosityBeta:0.###} <(o), >(ctrl)(o)\n");
+            r.Append($"ViscositySigma: {s.ViscositySigma:0.###} <(j), >(ctrl)(j)\n");
+            r.Append($"YieldRatioCompress: {s.YieldRatioCompress:0.###} <(k), >(ctrl)(k)\n");
+            r.Append($"YieldRatioStretch: {s.YieldRatioStretch:0.###} <(l), >(ctrl)(l)\n");
 
             var t = .5f + .5f * (float) Math.Sin(5 * gameTime.TotalGameTime.TotalSeconds);
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
-            spriteBatch.DrawString(font, b, new Vector2(10, 10), Color.Lerp(Color.White, Color.Gray, t));
+            spriteBatch.DrawString(font, l, new Vector2(10, 10), Color.Lerp(Color.White, Color.Gray, t));
+            spriteBatch.DrawString(font, r, new Vector2(10, 10) + new Vector2(m.ViewInt.X / 2f, 0f),
+                Color.Lerp(Color.White, Color.Gray, t));
             spriteBatch.End();
         }
     }
