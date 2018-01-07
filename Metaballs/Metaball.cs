@@ -28,6 +28,8 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGameDemoTools;
+using MonoGameDemoTools.Structures;
 
 namespace Metaballs
 {
@@ -41,7 +43,7 @@ namespace Metaballs
 
         public Texture2D Texture { get; set; }
         
-        public void Initialize(int seed, Bounds bounds, Matrices m)
+        public void Initialize(int seed, RectangleF bounds, Matrices m)
         {
             Random rand = new Random(seed);
             Trajectory = new Vector2(rand.Next(-1000, 1000) / 1000f, rand.Next(-1000, 1000) / 1000f);
@@ -56,35 +58,13 @@ namespace Metaballs
         {
             //World.Fluid.Particles.Remove(Particle);
         }
-
-        private void ConstrainAndReflect(Bounds bounds)
-        {
-            if (Position.X <= bounds.X)
-            {
-                Position = new Vector2(bounds.X, Position.Y);
-                Trajectory = new Vector2(-Trajectory.X, Trajectory.Y);
-            }
-            if (Position.X >= bounds.X+ bounds.Width)
-            {
-                Position = new Vector2(bounds.X + bounds.Width, Position.Y);
-                Trajectory = new Vector2(-Trajectory.X, Trajectory.Y);
-            }
-            if (Position.Y <= bounds.Y)
-            {
-                Position = new Vector2(Position.X, bounds.Y);
-                Trajectory = new Vector2(Trajectory.X, -Trajectory.Y);
-            }
-            if (Position.Y >= bounds.Y + bounds.Height)
-            {
-                Position = new Vector2(Position.X, bounds.Y + bounds.Height);
-                Trajectory = new Vector2(Trajectory.X, -Trajectory.Y);
-            }
-        }
-
-        public void Update(GameTime gameTime, Bounds bounds)
+        
+        public void Update(GameTime gameTime, RectangleF bounds)
         {
             Position = Position + Trajectory * Velocity;
-            ConstrainAndReflect(bounds);
+            PositionTrajectory pt = Calculations.ConstrainAndReflect(Position, Trajectory, bounds);
+            Position = pt.Position;
+            Trajectory = pt.Trajectory;
         }
     }
 }
